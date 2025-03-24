@@ -10,7 +10,6 @@ Here are the details about the model.
 
 #MesoNet is implemented using Pytorch and runs on Ubuntu with NVIDIA GeForce RTX 4090 graphics processing units,which relies on Pytorch Geometric.
 
-The following are the required Python libraries to be installed：numpy、pandas、rdkit、sklearn.
 
 ## Data preparation
 For the convenience of replicating our results, simply execute each of our codes directly to generate the dataset and proceed to the next step of prediction.
