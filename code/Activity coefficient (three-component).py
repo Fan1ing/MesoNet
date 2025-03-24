@@ -423,9 +423,9 @@ smiles1, smiles2, smiles3, targets, concentrations = load_data(triple_csv_path)
 dataset = MoleculesDataset(root='dataSS', smiles1=smiles1, smiles2=smiles2, smiles3=smiles3, targets=targets, concentrations=concentrations)
 print(len(dataset))
 
-class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
+class MesoNet(nn.Module):
     def __init__(self, input_dim, edge_dim, hidden_dim, output_dim):
-        super(MultiLevelGraphNetWithEdgeFeatures, self).__init__()
+        super(MesoNet, self).__init__()
 
         self.transformer_layer = TransformerEncoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_encoder = TransformerEncoder(self.transformer_layer, num_layers=2)
@@ -682,7 +682,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=10)
     val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=10)
 
-    model = MultiLevelGraphNetWithEdgeFeatures(input_dim, edge_dim, hidden_dim, output_dim).to(device)
+    model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     criterion = torch.nn.MSELoss()
 

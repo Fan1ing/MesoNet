@@ -114,15 +114,6 @@ bond_featurizer = BondFeaturizer(
 )
 
 
-# mol = Chem.MolFromSmiles('CO')
-# mol = Chem.AddHs(mol)
-# # for atom in mol.GetAtoms():
-# #     # print(atom.GetSymbol())
-# #     # print(atom_featurizer.encode(atom))
-# for bond in mol.GetBonds():
-#     print([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
-#     print(bond_featurizer.encode(bond))
-
 
 class MoleculesDataset(InMemoryDataset):
     def __init__(self, root, transform = None):
@@ -152,7 +143,6 @@ class MoleculesDataset(InMemoryDataset):
                 embeddings.append(atom_featurizer.encode(atom))
             embeddings = torch.tensor(embeddings,dtype=torch.float32)
 
-            #增加Nr
             rows, cols = embeddings.shape
             zeros_tensor = torch.zeros(rows, 7)
             embeddings = torch.cat((embeddings,zeros_tensor),dim = 1)
@@ -349,15 +339,16 @@ dataset = MoleculesDataset(root= "IEdata")
 # for i in train_loader:
 #     print(i.edge_attr.shape)
 
-class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
+
+class MesoNet(nn.Module):
     def __init__(self, input_dim, edge_dim, hidden_dim, output_dim):
-        super(MultiLevelGraphNetWithEdgeFeatures, self).__init__()
+        super(MesoNet, self).__init__()
 
         self.transformer_layer = TransformerEncoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_encoder = TransformerEncoder(self.transformer_layer, num_layers=2)
         self.decoder_layer = TransformerDecoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_decoder = TransformerDecoder(self.decoder_layer, num_layers=2)
-        edge_hidden_dim = 32  # 确保定义 edge_hidden_dim
+        edge_hidden_dim = 32
         self.a11 = NNConv(42, 32, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim),
             nn.ReLU(),
@@ -365,7 +356,6 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
             nn.Linear(edge_hidden_dim, 42 * 32)
         ), aggr="mean")
 
-        # 假设 CfC 是已定义的模块，保持不变
         self.lstm_a2_1 = CfC(6,AutoNCP(12,6), batch_first=True)
         self.x11 = nn.Linear(42,32)
 
@@ -384,10 +374,10 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
 
 
-        self.xm = nn.Linear(64, 64)  # 示例，替换为 CfC
+        self.xm = nn.Linear(64, 64)
 
         self.relu = nn.ReLU()
-        self.xm2 = CfC(64, 64, batch_first=True)  # 示例，替换为 CfC
+        self.xm2 = CfC(64, 64, batch_first=True)
         self.xm3 = nn.Linear(128,128)
         self.subgraph_conv1 = NNConv(128, hidden_dim, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim),
@@ -403,13 +393,12 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
             nn.Linear(edge_hidden_dim, hidden_dim * hidden_dim)
         ), aggr='mean')
-        # 修改 global_conv 的权重网络
         self.global_conv = NNConv(hidden_dim*2,128, nn.Sequential(
-            nn.Linear(4, edge_hidden_dim),  # 4 是 global_edge_attr 的输入维度
+            nn.Linear(4, edge_hidden_dim),
             nn.ReLU(),
             nn.Dropout(p=0.3),
 
-            nn.Linear(edge_hidden_dim , 2*hidden_dim*128)  # hidden_dim * 2 是输出维度
+            nn.Linear(edge_hidden_dim , 2*hidden_dim*128)
         ), aggr='mean')
 
         self.set2set2 = Set2Set(3*hidden_dim, processing_steps=2)
@@ -419,10 +408,10 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
             nn.Linear(hidden_dim*2,512),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(512,128),
+            nn.Linear(512,256),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(128, 64),
+            nn.Linear(256, 64),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(64, output_dim)
@@ -430,17 +419,13 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
 
     def forward(self,data):
-        # 提取子图特征
         x, edge_index, edge_attr,batch = data.x, data.edge_index, data.edge_attr,data.batch
 
 
-        # 第一部分特征处理 (前 25 维)
         x1 = x[:, 0:42]
-        '''x1 = self.a11(x1, edge_index, edge_attr)
-        x1 = self.relu(x1)'''
-        x1 =self.x11(x1)
+        x1 = self.a11(x1, edge_index, edge_attr)
         x1 = self.relu(x1)
-        # 第二部分特征处理 (25 维之后)
+
         x2 = x[:, 42:]
         x2out = x2
 
@@ -449,22 +434,16 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
         hidden_state =torch.cat((x2,x2),dim=1)
 
 
-        # 连续预测 3 个时间步
         for _ in range(5):
             output, hidden_state = self.lstm_a2_1(x2_input,hidden_state)
             predicted_steps.append(output.view(output.size(0), -1))
-            # 展平每个时间步的输出
- # 展平每个时间步的输出
 
-        # 将所有时间步结果拼接成一维向量
 
         x2_output = torch.cat(predicted_steps, dim=-1)
 
-        x2_output = self.x22(x2_output)
-        x2_output = self.relu(x2_output)
 
-        '''x2_output = self.a21(x2_output, edge_index, edge_attr)
-        x2_output = self.relu(x2_output)'''
+        x2_output = self.a21(x2_output, edge_index, edge_attr)
+        x2_output = self.relu(x2_output)
         x2_outputs = x2_output
 
         # Transformer Encoder & Decoder
@@ -481,7 +460,6 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
         # ReLU activation on decoded output
         transformer_output = self.relu(decoded_output.mean(dim=0))  # Shape: [batch_size, feature_dim=32]'''
         transformer_outputs =transformer_output
-        # 合并处理特征
         xm = torch.cat((x1, x2_output), dim=1)
         xmm = xm
         xm = xm.unsqueeze(1)
@@ -494,29 +472,27 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
         xm = self.relu(xm)
         xm = torch.cat((xm,xmm),dim=1)
 
-        # 图卷积处理
         subgraph_x = self.subgraph_conv1(xm, edge_index, edge_attr)
         subgraph_x = self.relu(subgraph_x)
         subgraph_x = self.subgraph_conv2(subgraph_x, edge_index, edge_attr)
         subgraph_x = self.relu(subgraph_x)
         subgraph_x = self.subgraph_conv2(subgraph_x, edge_index, edge_attr)
-        # 聚合子图特征
+
         subgraph_x = self.set2set(subgraph_x, batch)
         output = self.fc(subgraph_x)
 
-        return output
+        return output,x1,x2_outputs,transformer_outputs
 
 
-# 模型参数
+
 input_dim = atom_featurizer.dim
 edge_dim = bond_featurizer.dim
-hidden_dim = 128
+hidden_dim = 256
 edge_hidden_dim = 32
 output_dim = 1
 batch_size=128
-# 初始化模型
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = MultiLevelGraphNetWithEdgeFeatures(input_dim, edge_dim, hidden_dim, output_dim).to(device)
+model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = torch.nn.MSELoss()
 train_size = int(0.8 * len(dataset))
@@ -524,38 +500,25 @@ valid_size = int(0.2 * len(dataset))
 test_size = len(dataset) - train_size - valid_size
 
 train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(990)
+    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(1223)
 )
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory=True, num_workers=10)
 val_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)
 
-# 模型参数
-input_dim = atom_featurizer.dim
-edge_dim = bond_featurizer.dim
-hidden_dim = 128
-edge_hidden_dim = 32
-output_dim = 1
-batch_size=128
 
-# 初始化模型
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = MultiLevelGraphNetWithEdgeFeatures(input_dim, edge_dim, hidden_dim, output_dim).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-criterion = torch.nn.MSELoss()
-
-# 设置训练参数
-epochs = 3000
+epochs = 1000
 best_val_loss = float('inf')
 best_model_state = None
 early_stopping_counter = 0
-patience = 10  # 提前停止的容忍轮数
-
+patience = 10
+mae = []
+r = []
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 for epoch in range(epochs):
-    # ---------- 训练 ----------
+
     model.train()
     total_loss = 0
     y_train_true = []
@@ -563,97 +526,65 @@ for epoch in range(epochs):
 
     for batch in train_loader:
         optimizer.zero_grad()
-        batch = batch.to(device)  # 将数据转移到 GPU
-        output = model(batch)  # 前向传播
-        output = output * 13  # 恢复原始预测值
-        output = output.view(-1, 1)  # 确保输出形状为 [batch_size, 1]
-        target = batch.y.unsqueeze(1).to(device)  # 目标值
-        target = target * 13  # 恢复原始目标值
+        batch = batch.to(device)
+        output,_,_,_ = model(batch)
+        output = output.view(-1, 1)
+        target = batch.y.unsqueeze(1).to(device)
 
-        # 调试打印：检查批次大小和形状
-
-        # 计算损失
         loss = criterion(output, target)
-        loss.backward()  # 反向传播
-        optimizer.step()  # 参数更新
-        total_loss += loss.item() * batch.num_graphs  # 累计损失
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item() * batch.num_graphs
 
-        # 收集预测值和真实值用于误差计算
-        y_train_true.extend(target.cpu().numpy().flatten())  # 将目标值展平成一维数组
-        y_train_pred.extend(output.detach().cpu().numpy().flatten())  # 同样展平成一维数组
+        y_train_true.extend(target.cpu().numpy().flatten())
+        y_train_pred.extend(output.detach().cpu().numpy().flatten())
 
     avg_train_loss = total_loss / len(train_loader.dataset)
 
-    # 计算训练集 MAE、MSE 和 R²
     train_mae = mean_absolute_error(y_train_true, y_train_pred)
     train_mse = mean_squared_error(y_train_true, y_train_pred)
     train_r2 = r2_score(y_train_true, y_train_pred)
 
-    # ---------- 验证 ----------
     model.eval()
     val_loss = 0
     y_val_true = []
     y_val_pred = []
-
+    x1 = []
+    x2 = []
+    tran = []
     with torch.no_grad():
         for batch in val_loader:
             batch = batch.to(device)
-            output = model(batch)
-            output = output * 13  # 恢复原始预测值
-            output = output.view(-1, 1)  # 确保输出形状为 [batch_size, 1]
+            output,_,_,_ = model(batch)
+            output = output.view(-1, 1)
             target = batch.y.unsqueeze(1).to(device)
-            target = target * 13  # 恢复原始目标值
 
-            # 计算损失
             loss = criterion(output, target)
             val_loss += loss.item() * batch.num_graphs
 
-            # 收集预测值和真实值用于误差计算
-            y_val_true.extend(target.cpu().numpy().flatten())  # 确保展平成一维数组
-            y_val_pred.extend(output.cpu().numpy().flatten())  # 确保展平成一维数组
+            y_val_true.extend(target.cpu().numpy().flatten())
+            y_val_pred.extend(output.cpu().numpy().flatten())
+            _, x2_output,x2out,trans = model(batch)
+
+            x1.append(x2_output.cpu().numpy())
+            x2.append(x2out.cpu().numpy())
+            tran.append(trans.cpu().numpy())
 
     avg_val_loss = val_loss / len(val_loader.dataset)
 
-    # 计算验证集 MAE、MSE 和 R²
     val_mae = mean_absolute_error(y_val_true, y_val_pred)
     val_mse = mean_squared_error(y_val_true, y_val_pred)
     val_r2 = r2_score(y_val_true, y_val_pred)
 
-    # 输出当前 epoch 的结果
     print(f"Epoch {epoch + 1}/{epochs}")
     print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
     print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
-# 保存最终模型
-torch.save(model.state_dict(), "final_model.pth")
+x1 = np.concatenate(x1, axis=0)
+x2 = np.concatenate(x2, axis=0)
+tran = np.concatenate(tran, axis=0)
+import numpy as np
 
-# ---------- 测试模型性能 ----------
-model.eval()
-test_loss = 0
-y_test_true = []
-y_test_pred = []
-
-with torch.no_grad():
-    for batch in test_loader:
-        batch = batch.to(device)
-        output = model(batch)
-        output = output * 13  # 恢复原始预测值
-        output = output.view(-1, 1)  # 确保输出形状为 [batch_size, 1]
-        target = batch.y.unsqueeze(1).to(device)
-        target = target * 13  # 恢复原始目标值
-        loss = criterion(output, target)
-        test_loss += loss.item() * batch.num_graphs
-
-        # 保存预测值和真实值用于后续分析
-        y_test_true.extend(target.cpu().numpy().flatten())  # 确保展平成一维数组
-        y_test_pred.extend(output.cpu().numpy().flatten())  # 确保展平成一维数组
-
-avg_test_loss = test_loss / len(test_loader.dataset)
-
-# 计算测试集 MAE、MSE 和 R²
-test_mae = mean_absolute_error(y_test_true, y_test_pred)
-test_mse = mean_squared_error(y_test_true, y_test_pred)
-test_r2 = r2_score(y_test_true, y_test_pred)
-
-# 输出测试集性能
-print(f"Test Loss: {avg_test_loss:.4f}, MAE: {test_mae:.4f}, MSE: {test_mse:.4f}, R²: {test_r2:.4f}")
+np.savetxt('x1.csv', x1, delimiter=',')
+np.savetxt('x2.csv', x2, delimiter=',')
+np.savetxt('tran.csv', tran, delimiter=',')

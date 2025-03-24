@@ -13,7 +13,6 @@ from ncps.torch import CfC,LTC
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 from ncps.wirings import AutoNCP
 
-# Featurizer 类定义保持不变
 class Featurizer:
     def __init__(self, allowable_sets):
         self.dim = 0
@@ -81,7 +80,6 @@ class BondFeaturizer(Featurizer):
     def ring(self, bond):
         return bond.IsInRing()
 
-# 初始化 featurizer
 atom_featurizer = AtomFeaturizer(
     allowable_sets={
         "symbol": {"B", "Br", "C", "Cl", "F", "Ge", "H", "I", "N", "Na", "O", "P", "S", "Se", "Si", "Te"},
@@ -107,34 +105,30 @@ def process_molecule(smiles):
     mol = Chem.MolFromSmiles(smiles)
 
 
-    mol = Chem.AddHs(mol)  # 保证 mol 不是 None
-    # 计算全局特征
+    mol = Chem.AddHs(mol)
     num_donors = rdMolDescriptors.CalcNumHBD(mol)
     num_acceptors = rdMolDescriptors.CalcNumHBA(mol)
     logp = Crippen.MolLogP(mol)
     tpsa = rdMolDescriptors.CalcTPSA(mol)
 
-    # 节点特征
     node_features = []
     for atom in mol.GetAtoms():
         node_features.append(atom_featurizer.encode(atom))
     node_features = torch.tensor(node_features, dtype=torch.float32)
 
-    # 扩展特征维度
     rows, cols = node_features.shape
-    zeros_tensor = torch.zeros(rows, 6)  # 扩展6个维度
+    zeros_tensor = torch.zeros(rows, 6)
     node_features = torch.cat((node_features, zeros_tensor), dim=1)
 
-    # 为每个原子设置额外特性
     for i in range(rows):
         # B
         if node_features[i, 0] == 1:
-            node_features[i, -1] = 2.04  # 电负性
-            node_features[i, -2] = 82  # 共价半径
-            node_features[i, -3] = 5   # 原子序数
-            node_features[i, -4] = 10.82  # 原子质量
-            node_features[i, -5] = 8.298  # 第一电离能
-            node_features[i, -6] = 0.277  # 电子亲合能
+            node_features[i, -1] = 2.04
+            node_features[i, -2] = 82
+            node_features[i, -3] = 5
+            node_features[i, -4] = 10.82
+            node_features[i, -5] = 8.298
+            node_features[i, -6] = 0.277
 
         # Br
         elif node_features[i, 1] == 1:
@@ -271,10 +265,8 @@ def process_molecule(smiles):
             node_features[i, -5] = 9.010
             node_features[i, -6] = 1.971
 
-    # 去掉前16列，保留最后的特征
     node_features = torch.tensor(node_features, dtype=torch.float32)
 
-    # 边特征
     edges = []
     edge_features = []
     for bond in mol.GetBonds():
@@ -288,7 +280,6 @@ def process_molecule(smiles):
 
     global_features = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
 
-    # 如果提供了浓度信息，将其添加到全局特征中
     return Data(x=node_features, edge_index=edge_index, edge_attr=edge_attr, global_features=global_features)
 
 
@@ -298,22 +289,18 @@ def combine_molecules(smiles1, smiles2, x1, x2):
     graph1 = process_molecule(smiles1)
     graph2 = process_molecule(smiles2)
 
-    # 偏移第二个图的节点索引
     offset = graph1.x.size(0)
     graph2.edge_index += offset
 
-    # 合并节点特征和边信息
     combined_x = torch.cat([graph1.x, graph2.x], dim=0)
     combined_edge_index = torch.cat([graph1.edge_index, graph2.edge_index], dim=1)
     combined_edge_attr = torch.cat([graph1.edge_attr, graph2.edge_attr], dim=0)
 
-    # 创建 mask1 和 mask2 掩码
     mask1 = torch.zeros(combined_x.size(0), dtype=torch.bool)
     mask2 = torch.zeros(combined_x.size(0), dtype=torch.bool)
     mask1[:graph1.x.size(0)] = True
     mask2[graph1.x.size(0):] = True
 
-    # 创建全局特征边和边特征
     global_edge_index = torch.tensor([[0, 1], [1, 0]], dtype=torch.long)
     global_edge_attr = torch.cat(
         [graph1.global_features, graph2.global_features], dim=0
@@ -335,31 +322,25 @@ def combine_molecules(smiles1, smiles2, x1, x2):
     )
 
 
-    # 创建掩码
 
 
 
 def load_data(triple_csv_path):
-    # 读取三分子数据
     triple_df = pd.read_csv(triple_csv_path)
 
-    # 生成 SMILES 列表和目标值
     smiles1_triple = triple_df['solv1_smiles'].tolist()
     smiles2_triple = triple_df['solv2_smiles'].tolist()
     solv1_gamma_triple = triple_df['solv1_gamma'].tolist()
     solv2_gamma_triple = triple_df['solv2_gamma'].tolist()
 
-    solv1_x_triple = triple_df['solv1_x'].tolist()  # 浓度
+    solv1_x_triple = triple_df['solv1_x'].tolist()
     solv2_x_triple = triple_df['solv2_x'].tolist()
 
-    # 合并数据
     smiles1 = smiles1_triple
     smiles2 = smiles2_triple
 
-    # 对于三分子数据，目标值有三个 (solv1_gamma, solv2_gamma, solv3_gamma)
     targets_triple = list(zip(solv1_gamma_triple, solv2_gamma_triple))
 
-    # 浓度信息
     concentrations = list(zip(solv1_x_triple, solv2_x_triple))
 
     return smiles1, smiles2,  targets_triple, concentrations
@@ -393,36 +374,33 @@ class MoleculesDataset(InMemoryDataset):
             target = self.targets[i]
             concentration = self.concentrations[i]
 
-            # 合并分子数据
 
             data = combine_molecules(smile1, smile2, concentration[0], concentration[1])
 
             if data is not None:
-                data.y = torch.tensor(target, dtype=torch.float32)  # 目标值作为多维张量
+                data.y = torch.tensor(target, dtype=torch.float32)
                 datas.append(data)
             else:
                 print(f"Sample {i} is invalid and has been skipped.")
 
-        # 保存处理好的数据
         torch.save(self.collate(datas), self.processed_paths[0])
 
 triple_csv_path = '/home/ubuntu/Activity coefficient (two-component).csv'
 
 smiles1, smiles2,  targets, concentrations = load_data(triple_csv_path)
 
-# 创建数据集对象
 dataset = MoleculesDataset(root='dataLL', smiles1=smiles1, smiles2=smiles2, targets=targets, concentrations=concentrations)
 print(len(dataset))
 
-class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
+class MesoNet(nn.Module):
     def __init__(self, input_dim, edge_dim, hidden_dim, output_dim):
-        super(MultiLevelGraphNetWithEdgeFeatures, self).__init__()
+        super(MesoNet, self).__init__()
 
         self.transformer_layer = TransformerEncoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_encoder = TransformerEncoder(self.transformer_layer, num_layers=2)
         self.decoder_layer = TransformerDecoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_decoder = TransformerDecoder(self.decoder_layer, num_layers=2)
-        edge_hidden_dim = 32  # 确保定义 edge_hidden_dim
+        edge_hidden_dim = 32
         self.a11 = NNConv(41, 32, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim),
             nn.ReLU(),
@@ -430,7 +408,6 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
             nn.Linear(edge_hidden_dim, 41 * 32)
         ), aggr="mean")
 
-        # 假设 CfC 是已定义的模块，保持不变
         self.lstm_a2_1 = CfC(6,AutoNCP(12,6), batch_first=True)
         self.x11 = nn.Linear(41,32)
 
@@ -449,10 +426,10 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
 
 
-        self.xm = nn.Linear(64, 64)  # 示例，替换为 CfC
+        self.xm = nn.Linear(64, 64)
 
         self.relu = nn.ReLU()
-        self.xm2 = CfC(64, 64, batch_first=True)  # 示例，替换为 CfC
+        self.xm2 = CfC(64, 64, batch_first=True)
         self.xm3 = nn.Linear(128,128)
         self.subgraph_conv1 = NNConv(128, hidden_dim, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim),
@@ -470,7 +447,7 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
         ), aggr='mean')
 
         self.global_conv = NNConv(256+2, 128, nn.Sequential(
-            nn.Linear(4, edge_hidden_dim),  # 4 是 global_edge_attr 的输入维度
+            nn.Linear(4, edge_hidden_dim),
             nn.ReLU(),
             nn.Dropout(p=0.3),
             nn.Linear(edge_hidden_dim , 258*128)
@@ -490,20 +467,17 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
             nn.Linear(512, 128),
             nn.ReLU(),
             nn.Dropout(0),
-            nn.Linear(128, 1)  # 输出维度为2或3
+            nn.Linear(128, 1)
         )
 
     def process_subgraph(self, x, edge_index, edge_attr, batch, mask):
-        # 提取子图特征
         subgraph_x = x[mask]
         subgraph_edge_index, subgraph_edge_attr = subgraph(mask, edge_index, edge_attr, relabel_nodes=True)
 
-        # 第一部分特征处理 (前 25 维)
         x1 = subgraph_x[:, 0:41]
         x1 = self.a11(x1, subgraph_edge_index, subgraph_edge_attr)
         x1 = self.relu(x1)
 
-        # 第二部分特征处理 (25 维之后)
         x2 = subgraph_x[:, 41:]
         x2out = x2
 
@@ -512,14 +486,10 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
         hidden_state =torch.cat((x2,x2),dim=1)
 
 
-        # 连续预测 3 个时间步
         for _ in range(5):
             output, hidden_state = self.lstm_a2_1(x2_input,hidden_state)
             predicted_steps.append(output.view(output.size(0), -1))
-            # 展平每个时间步的输出
- # 展平每个时间步的输出
 
-        # 将所有时间步结果拼接成一维向量
 
         x2_output = torch.cat(predicted_steps, dim=-1)
 
@@ -543,7 +513,6 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
         # ReLU activation on decoded output
         transformer_output = self.relu(decoded_output.mean(dim=0))  # Shape: [batch_size, feature_dim=32]'''
-        # 合并处理特征
         xm = torch.cat((x1, x2_output), dim=1)
         xmm = xm
         xm = xm.unsqueeze(1)
@@ -556,32 +525,26 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
         xm = self.relu(xm)
         xm = torch.cat((xm,xmm),dim=1)
 
-        # 图卷积处理
         subgraph_x = self.subgraph_conv1(xm, subgraph_edge_index, subgraph_edge_attr)
         subgraph_x = self.relu(subgraph_x)
         subgraph_x = self.subgraph_conv2(subgraph_x, subgraph_edge_index, subgraph_edge_attr)
         subgraph_x = self.relu(subgraph_x)
         subgraph_x = self.subgraph_conv2(subgraph_x, subgraph_edge_index, subgraph_edge_attr)
-        # 聚合子图特征
         subgraph_x = self.set2set(subgraph_x, batch[mask])
         return subgraph_x
 
     def forward(self, data):
-        # 全局属性转移到设备
         global_edge_attr = data.global_edge_attr.to(data.x.device)
         global_node_attr = data.global_node_attr.to(data.x.device)
 
-        # 处理每个子图
         subgraph1_x = self.process_subgraph(data.x, data.edge_index, data.edge_attr, data.batch, data.mask1)
         subgraph2_x = self.process_subgraph(data.x, data.edge_index, data.edge_attr, data.batch, data.mask2)
         subgraph1_x = self.relu(subgraph1_x)
         subgraph2_x = self.relu(subgraph2_x)
 
 
-        # 确定当前批次大小
         batch_size = subgraph1_x.size(0)
 
-        # 创建全局边索引
         new_global_edge_index = torch.empty((2, batch_size * 2), dtype=torch.long, device=subgraph1_x.device)
         for i in range(batch_size):
             new_global_edge_index[0][i * 2] = i * 2     # 0, 2, ...
@@ -591,20 +554,18 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
         global_edge_index = new_global_edge_index.view(2, batch_size * 2)
 
-        # 创建扩展的节点特征
         expanded_x = torch.empty((batch_size * 2, subgraph1_x.size(1)), dtype=subgraph1_x.dtype, device=subgraph1_x.device)
-        expanded_x[0::2] = subgraph1_x  # 在偶数索引处放置subgraph1_x
+        expanded_x[0::2] = subgraph1_x
         expanded_x[1::2] = subgraph2_x
         expanded_x =torch.cat((expanded_x, global_node_attr), dim=1)
 
-        # 通过全局消息传递
+
 
 
         combined_x = self.global_conv(expanded_x, global_edge_index, global_edge_attr.to(expanded_x.device))  # 确保边属性在同一设备上
-        num_classes = batch_size  # 例如，从 0 到 4
-        repeats_per_class = 2  # 每个数字重复的次数
+        num_classes = batch_size
+        repeats_per_class = 2
         combined_x = self.relu(combined_x)
-        # 生成张量
         tensor = torch.cat([torch.full((repeats_per_class,), i, dtype=torch.long) for i in range(num_classes)])
         tensor = tensor.to(combined_x.device)
         combined_x = torch.cat((combined_x,expanded_x),dim=1)
@@ -620,7 +581,6 @@ class MultiLevelGraphNetWithEdgeFeatures(nn.Module):
 
         final_x = torch.cat((expanded_x, expanded_set2set_x), dim=1)
 
-        # 通过全连接层进行输出
         output = self.fc(final_x)
 
         return output
@@ -637,53 +597,44 @@ train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
 '''
 from sklearn.model_selection import KFold
 import torch
-from torch_geometric.loader import DataLoader  # 改成 PyG 的 DataLoader
+from torch_geometric.loader import DataLoader
 from torch.utils.data import Subset
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
 
-# 设置训练参数
+
 epochs = 250
-k_folds = 5  # 五折交叉验证
+k_folds = 5
 batch_size = 256
 input_dim = atom_featurizer.dim
 edge_dim = bond_featurizer.dim
 
 hidden_dim = 128
 
-# 根据目标值数量确定输出维度
-output_dim = 1  # 2 或 3
-# 设备配置
+output_dim = 1
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# 获取数据集大小
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
 start_fold = 0
-# 交叉验证循环
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     if fold < start_fold:
-        print(f"Skipping Fold {fold+1} (已经训练过)")
+        print(f"Skipping Fold {fold+1} ")
         continue
 
-    print(f"开始训练 Fold {fold+1}/{k_folds}")
+    print(f"start Fold {fold+1}/{k_folds}")
 
-    # 创建训练集和验证集
     train_subset = [dataset[i] for i in train_idx]
     val_subset = [dataset[i] for i in val_idx]
 
-    # 数据加载器
     train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=10)
     val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=10)
 
-    # 初始化模型
-    model = MultiLevelGraphNetWithEdgeFeatures(input_dim, edge_dim, hidden_dim, output_dim).to(device)
+    model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     criterion = torch.nn.MSELoss()
 
-    # 训练循环
     for epoch in range(epochs):
-        # ---------- 训练 ----------
         model.train()
         total_loss = 0
         y_train_true = []
@@ -691,29 +642,25 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
 
         for batch in train_loader:
             optimizer.zero_grad()
-            batch = batch.to(device)  # 将数据转移到 GPU
-            output = model(batch)  # 前向传播
-            output = output.view(-1, 1)  # 确保输出形状
-            target = batch.y.unsqueeze(1).to(device)  # 目标值
+            batch = batch.to(device)
+            output = model(batch)
+            output = output.view(-1, 1)
+            target = batch.y.unsqueeze(1).to(device)
 
-            # 计算损失
             loss = criterion(output, target)
-            loss.backward()  # 反向传播
-            optimizer.step()  # 更新参数
-            total_loss += loss.item() * batch.num_graphs  # 累计损失
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item() * batch.num_graphs
 
-            # 记录真实值和预测值
             y_train_true.extend(target.cpu().numpy().flatten())
             y_train_pred.extend(output.detach().cpu().numpy().flatten())
 
         avg_train_loss = total_loss / len(train_loader.dataset)
 
-        # 计算训练集 MAE、MSE 和 R²
         train_mae = mean_absolute_error(y_train_true, y_train_pred)
         train_mse = mean_squared_error(y_train_true, y_train_pred)
         train_r2 = r2_score(y_train_true, y_train_pred)
 
-        # ---------- 验证 ----------
         model.eval()
         val_loss = 0
         y_val_true = []
@@ -724,34 +671,28 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
             for batch in val_loader:
                 batch = batch.to(device)
                 output = model(batch)
-                output = output.view(-1, 1)  # 确保输出形状
+                output = output.view(-1, 1)
                 target = batch.y.unsqueeze(1).to(device)
 
-                # 计算损失
                 loss = criterion(output, target)
                 val_loss += loss.item() * batch.num_graphs
 
-                # 记录真实值和预测值
                 y_val_true.extend(target.cpu().numpy().flatten())
                 y_val_pred.extend(output.cpu().numpy().flatten())
                 absolute_errors.extend(abs(target.cpu().numpy().flatten() - output.cpu().numpy().flatten()))
 
         avg_val_loss = val_loss / len(val_loader.dataset)
 
-        # 计算验证集 MAE、MSE 和 R²
         val_mae = mean_absolute_error(y_val_true, y_val_pred)
         val_mse = mean_squared_error(y_val_true, y_val_pred)
         val_r2 = r2_score(y_val_true, y_val_pred)
 
-        # 输出当前 epoch 的结果
         print(f"Epoch {epoch + 1}/{epochs}")
         print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
         print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
-    # 保存每折的误差
     np.savetxt(f'absolute_errors_fold{fold+1}.csv', absolute_errors)
 
-    # 释放 GPU 内存
     del model
     torch.cuda.empty_cache()
 
