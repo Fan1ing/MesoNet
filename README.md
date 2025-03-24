@@ -16,7 +16,7 @@ For the convenience of replicating our results, simply execute each of our codes
 If you need to use your own dataset for prediction, simply prepare the required molecular smiles format and its properties for prediction, and then process the data into the same format as the data we provide.
 
 ## Continuously updated
-We will continue to update the data and models in the future.If you have any questions, please contact us. The contact information can be found in our paper.
+We will continue to update data and models in the future. If you have any questions, please contact my email: fanjinming@zju.edu.cn
 
 
 
