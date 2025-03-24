@@ -406,9 +406,7 @@ class MoleculesDataset(InMemoryDataset):
         # 保存处理好的数据
         torch.save(self.collate(datas), self.processed_paths[0])
 
-# 加载数据
-#dual_csv_path = '/home/ubuntu/二组分.csv'
-triple_csv_path = '/home/ubuntu/二组分全.csv'
+triple_csv_path = '/home/ubuntu/Activity coefficient (two-component).csv'
 
 smiles1, smiles2,  targets, concentrations = load_data(triple_csv_path)
 
@@ -661,7 +659,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # 获取数据集大小
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
-start_fold = 4
+start_fold = 0
 # 交叉验证循环
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     if fold < start_fold:
