@@ -276,23 +276,14 @@ def process_molecule(smiles):
             node_features[i, -5] = 8.151
             node_features[i, -6] = 1.385
 
-        #Sn
-        elif embeddings[i,15] == 1:
-            embeddings[i,-1] = 1.96
-            embeddings[i,-2] = 141
-            embeddings[i,-3] = 50
-            embeddings[i,-4] = 118.71
-            embeddings[i,-5] = 7.344
-            embeddings[i,-6] = 1.112
-
         #Te
-        elif embeddings[i,16] == 1:
-            embeddings[i,-1] = 2.1
-            embeddings[i,-2] = 135
-            embeddings[i,-3] = 52
-            embeddings[i,-4] = 127.6
-            embeddings[i,-5] = 9.010
-            embeddings[i,-6] = 1.971
+        elif node_features[i,15] == 1:
+            node_features[i,-1] = 2.1
+            node_features[i,-2] = 135
+            node_features[i,-3] = 52
+            node_features[i,-4] = 127.6
+            node_features[i,-5] = 9.010
+            node_features[i,-6] = 1.971
 
     node_features = torch.tensor(node_features, dtype=torch.float32)
 
