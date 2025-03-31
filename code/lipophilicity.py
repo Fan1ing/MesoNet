@@ -449,7 +449,8 @@ class MesoNet(nn.Module):
 
 
         x2_output = torch.cat(predicted_steps, dim=-1)
-
+        x2_output = self.x22(x2_output)
+        x2_output =self.relu(x2_output)
 
         x2_output = self.a21(x2_output, edge_index, edge_attr)
         x2_output = self.relu(x2_output)

@@ -93,7 +93,7 @@ class BondFeaturizer(Featurizer):
 
 atom_featurizer = AtomFeaturizer(
     allowable_sets={
-        "symbol": {"B", "Br", "C", "Cl", "F","Ge", "H", "I", "N", "Na", "O", "P", "S","Se","Si","Sn","Te"},
+        "symbol": {"B", "Br", "C", "Cl", "F","Ge", "H", "I", "N", "Na", "O", "P", "S","Se","Si","Te"},
         "n_valence": {0, 1, 2, 3, 4, 5, 6},
         "n_hydrogens": {0, 1, 2, 3, 4},
         "formal_charge": {-1, -2, 1, 2, 0},
@@ -439,7 +439,8 @@ class MesoNet(nn.Module):
 
         x2_output = torch.cat(predicted_steps, dim=-1)
 
-
+        x2_output = self.x22(x2_output)
+        x2_output = self.relu(x2_output)
         x2_output = self.a21(x2_output, edge_index, edge_attr)
         x2_output = self.relu(x2_output)
         x2_outputs = x2_output
