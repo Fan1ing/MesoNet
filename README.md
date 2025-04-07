@@ -5,6 +5,9 @@ For more design concepts and details of the model, please refer to Article  ***N
 # Overview
 
 Here are the details about the model.
+![Model principle](picture/Fig1.tif)
+![Model principle](picture/Fig2.tif)
+
 
 ## Code running conditions
 
