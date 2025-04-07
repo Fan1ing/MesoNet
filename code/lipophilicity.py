@@ -334,9 +334,43 @@ class MoleculesDataset(InMemoryDataset):
             edge_attr = torch.tensor(edge_attr,dtype=torch.float32)
 
             y = torch.tensor(y,dtype=torch.float32)
-            y = y/4.5
+            functional_groups_smarts = {
+                "hydroxyl": "[OX2H]",            # 羟基
+                "carboxyl": "C(=O)O",            # 羧基
+                "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
+                "ester": "C(=O)O[C]",               # 酯
+                "phenyl": "c1ccccc1",            # 苯基
+                "aldehyde": "C=O",               # 醛基
+                "ketone": "C(=O)C",              # 酮基
+                "methyl": "C",                   # 甲基
+                "amide": "C(=O)N",               # 酰胺
+                "nitrile": "C#N",                # 腈基
+                "sulfhydryl": "[C-SH]",          # 硫醇基
+                "sulfone": "S(=O)(=O)C",         # 硫酰基
+                "phosphate": "P(=O)(O)O",        # 磷酸酯
+                "halide": "[F,Cl,Br,I]",         # 卤素
+                "acetal": "C(O)C",               # 醛基乙醇
+                "alkyne": "C#C",                 # 炔烃
+                "nitro": "N(=O)=O",                  # 硝基
+                "ether": "C-O-C",                    # 醚
+                "alkene": "C=C",                     # 烯烃
+            }
 
-            data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr)
+            functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
+
+            for name, smarts in functional_groups_smarts.items():
+                patt = Chem.MolFromSmarts(smarts)
+                if patt is None:
+                    raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+                matches = mol.GetSubstructMatches(patt)
+                if matches:
+                    functional_groups_count[name] = len(matches)
+
+            # 将官能团数量添加到特征向量中
+            global_features = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
+
+
+            data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr,global_features=global_features)
             datas.append(data)
 
         # self.data, self.slices = self.collate(datas)
@@ -413,8 +447,9 @@ class MesoNet(nn.Module):
         self.set2set2 = Set2Set(3*hidden_dim, processing_steps=2)
         self.set2set = Set2Set(hidden_dim, processing_steps=2)
         self.FF = nn.Linear(6*hidden_dim,64)
+        self.group = nn.Linear(19,128)
         self.fc = nn.Sequential(
-            nn.Linear(hidden_dim*2,512),
+            nn.Linear(hidden_dim*2+128,512),
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(512,256),
@@ -428,7 +463,7 @@ class MesoNet(nn.Module):
 
 
     def forward(self,data):
-        x, edge_index, edge_attr,batch = data.x, data.edge_index, data.edge_attr,data.batch
+        x, edge_index, edge_attr,batch,group = data.x, data.edge_index, data.edge_attr,data.batch,data.global_features
 
 
         x1 = x[:, 0:42]
@@ -449,9 +484,9 @@ class MesoNet(nn.Module):
 
 
         x2_output = torch.cat(predicted_steps, dim=-1)
-        x2_output = self.x22(x2_output)
-        x2_output =self.relu(x2_output)
 
+        x2_output = self.x22(x2_output)
+        x2_output = self.relu(x2_output)
         x2_output = self.a21(x2_output, edge_index, edge_attr)
         x2_output = self.relu(x2_output)
         x2_outputs = x2_output
@@ -489,6 +524,10 @@ class MesoNet(nn.Module):
         subgraph_x = self.subgraph_conv2(subgraph_x, edge_index, edge_attr)
 
         subgraph_x = self.set2set(subgraph_x, batch)
+        group = self.group(group)
+        group = self.relu(group)
+
+        subgraph_x = torch.cat((subgraph_x,group),dim = 1)
         output = self.fc(subgraph_x)
 
         return output,x1,x2_outputs,transformer_outputs
@@ -497,7 +536,7 @@ class MesoNet(nn.Module):
 
 input_dim = atom_featurizer.dim
 edge_dim = bond_featurizer.dim
-hidden_dim = 256
+hidden_dim = 128
 edge_hidden_dim = 32
 output_dim = 1
 batch_size=128
@@ -510,7 +549,7 @@ valid_size = int(0.2 * len(dataset))
 test_size = len(dataset) - train_size - valid_size
 
 train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(1223)
+    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(396)
 )
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory=True, num_workers=10)
 val_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)

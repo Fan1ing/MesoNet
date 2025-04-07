@@ -278,7 +278,50 @@ def process_molecule(smiles):
     edge_index = torch.tensor(edges, dtype=torch.long).T
     edge_attr = torch.tensor(edge_features, dtype=torch.float32)
 
-    global_features = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
+    functional_groups_smarts = {
+        "hydroxyl": "[OX2H]",            # 羟基
+        "carboxyl": "C(=O)O",            # 羧基
+        "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
+        "ester": "C(=O)O",               # 酯
+        "phenyl": "c1ccccc1",            # 苯基
+        "aldehyde": "C=O",               # 醛基
+        "ketone": "C(=O)C",              # 酮基
+        "methyl": "C",                   # 甲基
+        "amide": "C(=O)N",               # 酰胺
+        "nitrile": "C#N",                # 腈基
+        "sulfhydryl": "[C-SH]",          # 硫醇基
+        "sulfone": "S(=O)(=O)C",         # 硫酰基
+        "phosphate": "P(=O)(O)O",        # 磷酸酯
+        "halide": "[F,Cl,Br,I]",         # 卤素
+        "acetal": "C(O)C",               # 醛基乙醇
+        "benzene": "c1ccccc1",           # 苯环
+        "thiol": "[C-SH]",               # 硫醇基团
+        "alkyne": "C#C",                 # 炔烃
+        "nitro": "N(=O)=O",                  # 硝基
+        "ether": "C-O-C",                    # 醚
+        "alkene": "C=C",                     # 烯烃
+        "Na+_ion": "[Na+1]",             # 钠离子 (Na+)
+        "K+_ion": "[K+1]",               # 钾离子 (K+)
+    }
+
+    functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
+
+    for name, smarts in functional_groups_smarts.items():
+        patt = Chem.MolFromSmarts(smarts)
+        if patt is None:
+            raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+        matches = mol.GetSubstructMatches(patt)
+        if matches:
+            functional_groups_count[name] = len(matches)
+
+    # 将官能团数量添加到特征向量中
+    global_features2 = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
+
+    # 将所有特征（如num_donors, num_acceptors, logp, tpsa）组合到一个向量中
+    global_features1 = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
+
+    # 将global_features2加入到global_features中
+    global_features = torch.cat((global_features1, global_features2), dim=1)
 
     return Data(x=node_features, edge_index=edge_index, edge_attr=edge_attr, global_features=global_features)
 
@@ -389,7 +432,7 @@ class MoleculesDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['dataSS.pt']
+        return ['datanewSS.pt']
 
     def download(self):
         pass
@@ -420,7 +463,7 @@ triple_csv_path = '/home/ubuntu/Activity coefficient (three-component).csv'
 
 smiles1, smiles2, smiles3, targets, concentrations = load_data(triple_csv_path)
 
-dataset = MoleculesDataset(root='dataSS', smiles1=smiles1, smiles2=smiles2, smiles3=smiles3, targets=targets, concentrations=concentrations)
+dataset = MoleculesDataset(root='datanewSS', smiles1=smiles1, smiles2=smiles2, smiles3=smiles3, targets=targets, concentrations=concentrations)
 print(len(dataset))
 
 class MesoNet(nn.Module):
@@ -455,6 +498,7 @@ class MesoNet(nn.Module):
             nn.Linear(edge_hidden_dim, 32 * 32)
         ), aggr="mean")
 
+        self.last = nn.Linear(128,128)
 
 
         self.xm = nn.Linear(64, 64)
@@ -482,13 +526,22 @@ class MesoNet(nn.Module):
             nn.Dropout(p=0.3),
             nn.Linear(edge_hidden_dim , 259*128)
         ), aggr='mean')
-
+        self.global_conv2 = NNConv(21,21, nn.Sequential(
+            nn.Linear(4, 4),
+            nn.ReLU(),
+            nn.Dropout(p=0.3),
+            nn.Linear(4 , 21*21)
+        ), aggr='mean')
         self.set2set = Set2Set(hidden_dim, processing_steps=2)
         self.set2set2 = Set2Set(3*hidden_dim+3 , processing_steps=2)
         self.FF = nn.Linear(6*hidden_dim+6,768)
 
+        self.setgroup = Set2Set(42, processing_steps=2)
+
+        self.group = nn.Linear(84+21,128)
+        self.combine = nn.Linear(259+768+128,259+768+128)
         self.fc = nn.Sequential(
-            nn.Linear(259+768, 1024),
+            nn.Linear(259+768+128, 1024),
             nn.ReLU(),
             nn.Dropout(0),
             nn.Linear(1024, 512),
@@ -563,7 +616,8 @@ class MesoNet(nn.Module):
         xm = xm.squeeze(1)
         xm = self.relu(xm)
         xm = torch.cat((xm,xmm),dim=1)
-
+        xm = self.last(xm)
+        xm = self.relu(xm)
         # 图卷积处理
         subgraph_x = self.subgraph_conv1(xm, subgraph_edge_index, subgraph_edge_attr)
         subgraph_x = self.relu(subgraph_x)
@@ -576,8 +630,10 @@ class MesoNet(nn.Module):
 
 
     def forward(self, data):
-        global_edge_attr = data.global_edge_attr.to(data.x.device)
+        global_edge_attrall = data.global_edge_attr.to(data.x.device)
         global_node_attr = data.global_node_attr.to(data.x.device)
+        global_edge_attr = global_edge_attrall[:, 0:4]
+        group = global_edge_attrall[:, 4:]
 
         subgraph1_x,x2_outputs,x2out,transformer_outputs = self.process_subgraph(data.x, data.edge_index, data.edge_attr, data.batch, data.mask1)
         subgraph2_x,_,_,_ = self.process_subgraph(data.x, data.edge_index, data.edge_attr, data.batch, data.mask2)
@@ -587,6 +643,16 @@ class MesoNet(nn.Module):
         subgraph3_x = self.relu(subgraph3_x)
 
         batch_size = subgraph1_x.size(0)
+
+        group1 = group[0::6]
+        group2 = group[1::6]
+        group3 = group[3::6]
+        group = torch.empty((batch_size * 3, 21), dtype=subgraph1_x.dtype, device=subgraph1_x.device)
+        group[0::3] = group1
+        group[1::3] = group2
+        group[2::3] = group3
+
+
 
         new_global_edge_index = torch.empty((2, batch_size * 6), dtype=torch.long, device=subgraph1_x.device)
         for i in range(batch_size):
@@ -632,9 +698,25 @@ class MesoNet(nn.Module):
         expanded_set2set_x = self.FF(expanded_set2set_x)
         expanded_set2set_x = self.relu(expanded_set2set_x)
 
-        final_x = torch.cat((expanded_x, expanded_set2set_x), dim=1)
+        expand_group = self.global_conv2(group, global_edge_index, global_edge_attr.to(expanded_x.device))
+        expand_group = self.relu(expand_group)
+        expand_group = self.setgroup(torch.cat((group,expand_group),dim=1), tensor)
+        expand_group_shape = expand_group.size()
 
+        expand_group = expand_group.unsqueeze(1).expand(-1, 3, -1)
+
+        expand_group = expand_group.contiguous().view(-1, expand_group_shape[1])
+
+
+        group = torch.cat((group,expand_group),dim =1)
+        group = self.group(group)
+        group = self.relu(group)
+
+        final_x = torch.cat((expanded_x,expanded_set2set_x,group), dim=1)
+        '''final_x = self.combine(final_x)
+        final_x = self.relu(final_x)'''
         output = self.fc(final_x)
+
         return output
 
 
@@ -668,7 +750,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
 
-start_fold = 0
+start_fold = 1
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     if fold < start_fold:
         print(f"Skipping Fold {fold+1} ")

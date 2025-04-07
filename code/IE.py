@@ -114,6 +114,15 @@ bond_featurizer = BondFeaturizer(
 )
 
 
+# mol = Chem.MolFromSmiles('CO')
+# mol = Chem.AddHs(mol)
+# # for atom in mol.GetAtoms():
+# #     # print(atom.GetSymbol())
+# #     # print(atom_featurizer.encode(atom))
+# for bond in mol.GetBonds():
+#     print([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
+#     print(bond_featurizer.encode(bond))
+
 
 class MoleculesDataset(InMemoryDataset):
     def __init__(self, root, transform = None):
@@ -143,8 +152,9 @@ class MoleculesDataset(InMemoryDataset):
                 embeddings.append(atom_featurizer.encode(atom))
             embeddings = torch.tensor(embeddings,dtype=torch.float32)
 
+            #增加Nr
             rows, cols = embeddings.shape
-            zeros_tensor = torch.zeros(rows, 7)
+            zeros_tensor = torch.zeros(rows, 6)
             embeddings = torch.cat((embeddings,zeros_tensor),dim = 1)
             for i in range(rows):
         #B
@@ -155,7 +165,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 10.82 #原子质量
                     embeddings[i,-5] = 8.298 #第一电离能
                     embeddings[i,-6] = 0.277 #电子亲合能
-                    embeddings[i,-7] = 0
 
                 #Br
                 elif embeddings[i,1] == 1:
@@ -165,7 +174,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 79.904
                     embeddings[i,-5] = 11.814
                     embeddings[i,-6] = 3.364
-                    embeddings[i,-7] = 1
 
                 #C
                 elif embeddings[i,2] == 1:
@@ -175,7 +183,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 12.011
                     embeddings[i,-5] = 11.261
                     embeddings[i,-6] = 1.595
-                    embeddings[i,-7] = 0
 
                 #Cl
                 elif embeddings[i,3] == 1:
@@ -185,7 +192,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 35.45
                     embeddings[i,-5] = 12.968
                     embeddings[i,-6] = 3.62
-                    embeddings[i,-7] = 1
                 #F
                 elif embeddings[i,4] == 1:
                     embeddings[i,-1] = 3.98
@@ -194,7 +200,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 18.998
                     embeddings[i,-5] = 17.422
                     embeddings[i,-6] = 3.40
-                    embeddings[i,-7] = 1
 
             #Ge
                 elif embeddings[i,5] == 1:
@@ -204,7 +209,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 72.63
                     embeddings[i,-5] = 7.90
                     embeddings[i,-6] = 1.23
-                    embeddings[i,-7] = 0
 
 
                 #H
@@ -215,7 +219,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 1.008
                     embeddings[i,-5] = 13.598
                     embeddings[i,-6] = 0.755
-                    embeddings[i,-7] = 0
 
 
                 #I
@@ -226,7 +229,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 126.9
                     embeddings[i,-5] = 10.451
                     embeddings[i,-6] = 3.060
-                    embeddings[i,-7] = 1
 
                  #N
                 elif embeddings[i,8] == 1:
@@ -236,7 +238,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 14.007
                     embeddings[i,-5] = 14.534
                     embeddings[i,-6] = 0.07
-                    embeddings[i,-7] = 0
 
                  #Na
                 elif embeddings[i,9] == 1:
@@ -246,7 +247,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 22.99
                     embeddings[i,-5] = 5.139
                     embeddings[i,-6] = 0.547
-                    embeddings[i,-7] = 0
 
                  #O
                 elif embeddings[i,10] == 1:
@@ -256,7 +256,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 15.999
                     embeddings[i,-5] = 13.618
                     embeddings[i,-6] = 1.46
-                    embeddings[i,-7] = 0
                  #P
                 elif embeddings[i,11] == 1:
                     embeddings[i,-1] = 2.19 #电负性
@@ -265,7 +264,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 30.974 #原子质量
                     embeddings[i,-5] = 10.487 #第一电离能
                     embeddings[i,-6] = 0.75 #电子亲合能
-                    embeddings[i,-7] = 0
 
 
                 #S
@@ -276,7 +274,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 32.06 #原子质量
                     embeddings[i,-5] = 10.36 #第一电离能
                     embeddings[i,-6] = 2.07 #电子亲合能
-                    embeddings[i,-7] = 0
 
                 #Se
                 elif embeddings[i,13] == 1:
@@ -286,7 +283,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 78.971 #原子质量
                     embeddings[i,-5] = 9.753 #第一电离能
                     embeddings[i,-6] = 2.02 #电子亲合能
-                    embeddings[i,-7] = 0
                 #Si
                 elif embeddings[i,14] == 1:
                     embeddings[i,-1] = 1.90 #电负性
@@ -295,7 +291,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 28.085 #原子质量
                     embeddings[i,-5] = 8.151 #第一电离能
                     embeddings[i,-6] = 1.385 #电子亲合能
-                    embeddings[i,-7] = 0
 
                 #Te
                 elif embeddings[i,15] == 1:
@@ -305,7 +300,6 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-4] = 127.6 #原子质量
                     embeddings[i,-5] = 9.010 #第一电离能
                     embeddings[i,-6] = 1.971 #电子亲合能
-                    embeddings[i,-7] = 0
 
             embeddings = torch.tensor(embeddings,dtype=torch.float32)
 
@@ -324,9 +318,43 @@ class MoleculesDataset(InMemoryDataset):
             edge_attr = torch.tensor(edge_attr,dtype=torch.float32)
 
             y = torch.tensor(y,dtype=torch.float32)
-            y = y/13
+            functional_groups_smarts = {
+                "hydroxyl": "[OX2H]",            # 羟基
+                "carboxyl": "C(=O)O",            # 羧基
+                "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
+                "ester": "C(=O)O[C]",               # 酯
+                "phenyl": "c1ccccc1",            # 苯基
+                "aldehyde": "C=O",               # 醛基
+                "ketone": "C(=O)C",              # 酮基
+                "methyl": "C",                   # 甲基
+                "amide": "C(=O)N",               # 酰胺
+                "nitrile": "C#N",                # 腈基
+                "sulfhydryl": "[C-SH]",          # 硫醇基
+                "sulfone": "S(=O)(=O)C",         # 硫酰基
+                "phosphate": "P(=O)(O)O",        # 磷酸酯
+                "halide": "[F,Cl,Br,I]",         # 卤素
+                "acetal": "C(O)C",               # 醛基乙醇
+                "alkyne": "C#C",                 # 炔烃
+                "nitro": "N(=O)=O",                  # 硝基
+                "ether": "C-O-C",                    # 醚
+                "alkene": "C=C",                     # 烯烃
+            }
 
-            data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr)
+            functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
+
+            for name, smarts in functional_groups_smarts.items():
+                patt = Chem.MolFromSmarts(smarts)
+                if patt is None:
+                    raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+                matches = mol.GetSubstructMatches(patt)
+                if matches:
+                    functional_groups_count[name] = len(matches)
+
+            # 将官能团数量添加到特征向量中
+            global_features = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
+
+
+            data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr,global_features=global_features)
             datas.append(data)
 
         # self.data, self.slices = self.collate(datas)
@@ -339,7 +367,6 @@ dataset = MoleculesDataset(root= "IEdata")
 # for i in train_loader:
 #     print(i.edge_attr.shape)
 
-
 class MesoNet(nn.Module):
     def __init__(self, input_dim, edge_dim, hidden_dim, output_dim):
         super(MesoNet, self).__init__()
@@ -349,11 +376,11 @@ class MesoNet(nn.Module):
         self.decoder_layer = TransformerDecoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_decoder = TransformerDecoder(self.decoder_layer, num_layers=2)
         edge_hidden_dim = 32
-        self.a11 = NNConv(42, 32, nn.Sequential(
+        self.a11 = NNConv(41, 32, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim),
             nn.ReLU(),
             nn.Dropout(p=0),
-            nn.Linear(edge_hidden_dim, 42 * 32)
+            nn.Linear(edge_hidden_dim, 41 * 32)
         ), aggr="mean")
 
         self.lstm_a2_1 = CfC(6,AutoNCP(12,6), batch_first=True)
@@ -404,8 +431,9 @@ class MesoNet(nn.Module):
         self.set2set2 = Set2Set(3*hidden_dim, processing_steps=2)
         self.set2set = Set2Set(hidden_dim, processing_steps=2)
         self.FF = nn.Linear(6*hidden_dim,64)
+        self.group = nn.Linear(19,128)
         self.fc = nn.Sequential(
-            nn.Linear(hidden_dim*2,512),
+            nn.Linear(hidden_dim*2+128,512),
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(512,256),
@@ -419,14 +447,14 @@ class MesoNet(nn.Module):
 
 
     def forward(self,data):
-        x, edge_index, edge_attr,batch = data.x, data.edge_index, data.edge_attr,data.batch
+        x, edge_index, edge_attr,batch,group = data.x, data.edge_index, data.edge_attr,data.batch,data.global_features
 
 
-        x1 = x[:, 0:42]
+        x1 = x[:, 0:41]
         x1 = self.a11(x1, edge_index, edge_attr)
         x1 = self.relu(x1)
 
-        x2 = x[:, 42:]
+        x2 = x[:, 41:]
         x2out = x2
 
         x2_input = x2.unsqueeze(1)
@@ -441,7 +469,8 @@ class MesoNet(nn.Module):
 
         x2_output = torch.cat(predicted_steps, dim=-1)
 
-
+        x2_output = self.x22(x2_output)
+        x2_output = self.relu(x2_output)
         x2_output = self.a21(x2_output, edge_index, edge_attr)
         x2_output = self.relu(x2_output)
         x2_outputs = x2_output
@@ -479,6 +508,10 @@ class MesoNet(nn.Module):
         subgraph_x = self.subgraph_conv2(subgraph_x, edge_index, edge_attr)
 
         subgraph_x = self.set2set(subgraph_x, batch)
+        group = self.group(group)
+        group = self.relu(group)
+
+        subgraph_x = torch.cat((subgraph_x,group),dim = 1)
         output = self.fc(subgraph_x)
 
         return output,x1,x2_outputs,transformer_outputs
@@ -487,7 +520,7 @@ class MesoNet(nn.Module):
 
 input_dim = atom_featurizer.dim
 edge_dim = bond_featurizer.dim
-hidden_dim = 256
+hidden_dim = 128
 edge_hidden_dim = 32
 output_dim = 1
 batch_size=128
@@ -500,7 +533,7 @@ valid_size = int(0.2 * len(dataset))
 test_size = len(dataset) - train_size - valid_size
 
 train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(1223)
+    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(991)
 )
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory=True, num_workers=10)
 val_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)

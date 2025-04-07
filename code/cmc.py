@@ -329,8 +329,55 @@ class MoleculesDataset(InMemoryDataset):
             edge_attr = torch.tensor(edge_attr,dtype=torch.float32)
 
             y = torch.tensor(y,dtype=torch.float32)
+            functional_groups_smarts = {
+                "hydroxyl": "[OX2H]",            # 羟基
+                "carboxyl": "C(=O)O",            # 羧基
+                "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
+                "ester": "C(=O)O[C]",               # 酯
+                "phenyl": "c1ccccc1",            # 苯基
+                "aldehyde": "C=O",               # 醛基
+                "ketone": "C(=O)C",              # 酮基
+                "methyl": "C",                   # 甲基
+                "amide": "C(=O)N",               # 酰胺
+                "nitrile": "C#N",                # 腈基
+                "sulfhydryl": "[C-SH]",          # 硫醇基
+                "sulfone": "S(=O)(=O)C",         # 硫酰基
+                "phosphate": "P(=O)(O)O",        # 磷酸酯
+                "halide": "[F,Cl,Br,I]",         # 卤素
+                "acetal": "C(O)C",               # 醛基乙醇
+                "alkyne": "C#C",                 # 炔烃
+                "nitro": "N(=O)=O",                  # 硝基
+                "ether": "C-O-C",                    # 醚
+                "alkene": "C=C",                     # 烯烃
+                "Na+_ion": "[Na+1]",             # 钠离子 (Na+)
+                "K+_ion": "[K+1]",               # 钾离子 (K+)
+                "Cl-_ion": "[Cl-]",              # 氯离子 (Cl-)
+                "Br-_ion": "[Br-]",              # 溴离子 (Br-)
+                "I-_ion": "[I-]",                # 碘离子 (I-)
+                "F-_ion": "[F-]",                # 氟离子 (F-)
+                "phosphonium": "[P+]",           # 磷阳离子
+                "nitrogen": "[N+](C)(C)",        # 季铵阳离子
+                "sodium": "[Na+]",               # 钠离子
+                "potassium": "[K+]",             # 钾离子
+                "ammonium": "[N+](C)(C)(C)",     # 四甲基氨阳离子
+            }
 
-            data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr)
+
+            functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
+
+            for name, smarts in functional_groups_smarts.items():
+                patt = Chem.MolFromSmarts(smarts)
+                if patt is None:
+                    raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+                matches = mol.GetSubstructMatches(patt)
+                if matches:
+                    functional_groups_count[name] = len(matches)
+
+            # 将官能团数量添加到特征向量中
+            global_features = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
+
+
+            data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr,global_features=global_features)
             datas.append(data)
 
         # self.data, self.slices = self.collate(datas)
@@ -408,8 +455,9 @@ class MesoNet(nn.Module):
         self.set2set2 = Set2Set(3*hidden_dim, processing_steps=2)
         self.set2set = Set2Set(hidden_dim, processing_steps=2)
         self.FF = nn.Linear(6*hidden_dim,64)
+        self.group = nn.Linear(30,128)
         self.fc = nn.Sequential(
-            nn.Linear(hidden_dim*2,512),
+            nn.Linear(hidden_dim*2+128,512),
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(512,256),
@@ -417,14 +465,14 @@ class MesoNet(nn.Module):
             nn.Dropout(0.1),
             nn.Linear(256, 64),
             nn.ReLU(),
-            nn.Dropout(0),
+            nn.Dropout(0.1),
             nn.Linear(64, output_dim)
         )
 
-
     def forward(self,data):
 
-        x, edge_index, edge_attr,batch = data.x, data.edge_index, data.edge_attr,data.batch
+        x, edge_index, edge_attr, batch, group = data.x, data.edge_index, data.edge_attr,data.batch,data.global_features
+
         x1 = x[:, 0:42]
         x1 = self.a11(x1, edge_index, edge_attr)
         x1 = self.relu(x1)
@@ -485,10 +533,13 @@ class MesoNet(nn.Module):
         subgraph_x = self.relu(subgraph_x)
         subgraph_x = self.subgraph_conv2(subgraph_x, edge_index, edge_attr)
         subgraph_x = self.set2set(subgraph_x, batch)
+        group = self.group(group)
+        group = self.relu(group)
+
+        subgraph_x = torch.cat((subgraph_x,group),dim = 1)
         output = self.fc(subgraph_x)
 
         return output,x1,x2_outputs,transformer_outputs
-
 
 
 input_dim = atom_featurizer.dim
