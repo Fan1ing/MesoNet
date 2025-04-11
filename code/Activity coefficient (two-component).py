@@ -12,6 +12,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from ncps.torch import CfC,LTC
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 from ncps.wirings import AutoNCP
+triple_csv_path = '/MesoNet/data/output_binary_with_inf_all.csv'
 
 class Featurizer:
     def __init__(self, allowable_sets):
@@ -426,7 +427,6 @@ class MoleculesDataset(InMemoryDataset):
 
         torch.save(self.collate(datas), self.processed_paths[0])
 
-triple_csv_path = '/MesoNet/data/output_binary_with_inf_all.csv'
 
 smiles1, smiles2,  targets, concentrations = load_data(triple_csv_path)
 
