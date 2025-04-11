@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error,me
 from rdkit.Chem import rdMolDescriptors,Crippen
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 
-csv_path = '/home/ubuntu/rongjiedu.csv'
+csv_path = '/MesoNet/data/Solubility.csv'
 df = pd.read_csv(csv_path)
 y1 = df['activity']
 smiles = df['smile']
@@ -123,11 +123,11 @@ class MoleculesDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return 'rongjiedu.csv'
+        return 'Solubility.csv'
 
     @property
     def processed_file_names(self):
-        return 'rongjiedu.pt'
+        return 'Solubility.pt'
 
     def download(self):
         # Download to `self.raw_dir`.
@@ -372,7 +372,7 @@ class MoleculesDataset(InMemoryDataset):
         torch.save(self.collate(datas), self.processed_paths[0])
 
 max_nodes = 128
-dataset = MoleculesDataset(root= "rongjiedu")
+dataset = MoleculesDataset(root= "Solubility")
 
 
 

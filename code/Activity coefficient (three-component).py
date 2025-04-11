@@ -459,7 +459,7 @@ class MoleculesDataset(InMemoryDataset):
 
         torch.save(self.collate(datas), self.processed_paths[0])
 
-triple_csv_path = '/home/ubuntu/Activity coefficient (three-component).csv'
+triple_csv_path = '/MesoNet/data/Activity coefficient (three-component).csv'
 
 smiles1, smiles2, smiles3, targets, concentrations = load_data(triple_csv_path)
 

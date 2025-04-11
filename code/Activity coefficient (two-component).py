@@ -426,7 +426,7 @@ class MoleculesDataset(InMemoryDataset):
 
         torch.save(self.collate(datas), self.processed_paths[0])
 
-triple_csv_path = '/home/ubuntu/output_binary_with_inf_all.csv'
+triple_csv_path = '/MesoNet/data/output_binary_with_inf_all.csv'
 
 smiles1, smiles2,  targets, concentrations = load_data(triple_csv_path)
 

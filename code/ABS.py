@@ -14,8 +14,13 @@ from math import sqrt
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error,mean_absolute_percentage_error
 from rdkit.Chem import rdMolDescriptors,Crippen
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
-# Featurizers
-csv_path = '/MesoNet/data/PLQY.csv'
+from sklearn.metrics import mean_absolute_error, r2_score
+
+
+#Change to local address
+# The absorption wavelength and emission wavelength use the same code, only the dataset is different.
+
+csv_path = '/MesoNet/data/aboso.csv'
 
 df = pd.read_csv(csv_path)
 
@@ -298,27 +303,27 @@ def process_molecule(smiles):
     edge_index = torch.tensor(edges, dtype=torch.long).T
     edge_attr = torch.tensor(edge_features, dtype=torch.float32)
     functional_groups_smarts = {
-        "hydroxyl": "[OX2H]",            # 羟基
-        "carboxyl": "C(=O)O",            # 羧基
-        "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
-        "ester": "C(=O)O[C]",               # 酯
-        "phenyl": "c1ccccc1",            # 苯基
-        "aldehyde": "C=O",               # 醛基
-        "ketone": "C(=O)C",              # 酮基
-        "methyl": "C",                   # 甲基
-        "amide": "C(=O)N",               # 酰胺
-        "nitrile": "C#N",                # 腈基
-        "sulfhydryl": "[C-SH]",          # 硫醇基
-        "sulfone": "S(=O)(=O)C",         # 硫酰基
-        "phosphate": "P(=O)(O)O",        # 磷酸酯
-        "halide": "[F,Cl,Br,I]",         # 卤素
-        "acetal": "C(O)C",               # 醛基乙醇
-        "alkyne": "C#C",                 # 炔烃
-        "nitro": "N(=O)=O",                  # 硝基
-        "ether": "C-O-C",                    # 醚
-        "alkene": "C=C",                     # 烯烃
-        "quaternary_amine": "[N+](C)(C)",  # 季铵离子
-        "B-": "[B-]",  #
+        "hydroxyl": "[OX2H]",
+        "carboxyl": "C(=O)O",
+        "amine": "[NX3;H2,H1;!$(NC=O)]",
+        "ester": "C(=O)O[C]",
+        "phenyl": "c1ccccc1",
+        "aldehyde": "C=O",
+        "ketone": "C(=O)C",
+        "methyl": "C",
+        "amide": "C(=O)N",
+        "nitrile": "C#N",
+        "sulfhydryl": "[C-SH]",
+        "sulfone": "S(=O)(=O)C",
+        "phosphate": "P(=O)(O)O",
+        "halide": "[F,Cl,Br,I]",
+        "acetal": "C(O)C",
+        "alkyne": "C#C",
+        "nitro": "N(=O)=O",
+        "ether": "C-O-C",
+        "alkene": "C=C",
+        "quaternary_amine": "[N+](C)(C)",
+        "B-": "[B-]",
 
 
     }
@@ -328,19 +333,19 @@ def process_molecule(smiles):
     for name, smarts in functional_groups_smarts.items():
         patt = Chem.MolFromSmarts(smarts)
         if patt is None:
-            raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+            raise ValueError(f"Invalid SMARTS mode: {smarts}")
         matches = mol.GetSubstructMatches(patt)
         if matches:
             functional_groups_count[name] = len(matches)
 
-    # 将官能团数量添加到特征向量中
+    #  Add functional group counts to the feature vector
     global_features2 = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
     num_aromatic_rings = rdMolDescriptors.CalcNumAromaticRings(mol)
 
-    # 将所有特征（如num_donors, num_acceptors, logp, tpsa）组合到一个向量中
+    # Combine all features (such as num_donors, num_acceptors, logp, tpsa) into one vector
     global_features1 = torch.tensor([num_donors, num_acceptors, logp, tpsa,num_aromatic_rings], dtype=torch.float32).unsqueeze(0)
 
-    # 将global_features2加入到global_features中
+    # Combine global features
     global_features = torch.cat((global_features1, global_features2), dim=1)
 
 
@@ -641,12 +646,12 @@ class MoleculesDataset(InMemoryDataset):
     @property
     def raw_file_names(self):
 
-        return ['dataff.csv']
+        return ['aboso.csv']
 
     @property
     def processed_file_names(self):
 
-        return ['dataff.pt']
+        return ['aboso.pt']
 
     def download(self):
 
@@ -662,14 +667,14 @@ class MoleculesDataset(InMemoryDataset):
             datas.append(data)
 
         torch.save(self.collate(datas), self.processed_paths[0])
-dataset = MoleculesDataset(root="dataff", smiles1=smiles1, smiles2=smiles2, ys=ys)
+dataset = MoleculesDataset(root="aboso", smiles1=smiles1, smiles2=smiles2, ys=ys)
 print(len(dataset))
 train_size = int(0.8 * len(dataset))
 valid_size = int(0.2 * len(dataset))
 test_size = len(dataset) - train_size - valid_size
 
 train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(9)
+    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(297)
 )
 
 
@@ -680,7 +685,7 @@ valid_dataset = dataset[1622:1623]'''
 '''train_dataset = dataset[0:692]+dataset[693:1620]+dataset[1621:1845]+dataset[1846:]
 valid_dataset = dataset[692:693]+dataset[1620:1621]+dataset[1845:1846]'''
 
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory=True, num_workers=10)
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)
 val_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)
 #test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, pin_memory=True, num_workers=10)
 print(len(train_dataset ))
@@ -709,12 +714,16 @@ patience = 10
 mae = []
 r = []
 
-from sklearn.metrics import mean_absolute_error, r2_score
-import numpy as np
 
 def mean_relative_error(y_true, y_pred):
 
     return np.mean(np.abs((y_true - y_pred) / y_true))
+
+# Modify the existing training loop to track the best model
+best_val_loss = float('inf')  # Initialize the best validation loss to infinity
+best_epoch = 0  # Initialize the epoch with the best result
+best_model_state = None  # To store the best model state
+
 
 for epoch in range(epochs):
 
@@ -727,8 +736,10 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         batch = batch.to(device)
         output, _, _, _ = model(batch)
+        output = output * 1000
         output = output.view(-1, 1)
         target = batch.y.unsqueeze(1).to(device)
+        target = target * 1000
 
         loss = criterion(output, target)
         loss.backward()
@@ -744,6 +755,7 @@ for epoch in range(epochs):
     train_mre = mean_relative_error(np.array(y_train_true), np.array(y_train_pred))
     train_r2 = r2_score(y_train_true, y_train_pred)
 
+    # Evaluation on validation set
     model.eval()
     val_loss = 0
     y_val_true = []
@@ -756,8 +768,10 @@ for epoch in range(epochs):
         for batch in val_loader:
             batch = batch.to(device)
             output, _, _, _ = model(batch)
+            output = output * 1000
             output = output.view(-1, 1)
             target = batch.y.unsqueeze(1).to(device)
+            target = target * 1000
 
             loss = criterion(output, target)
             val_loss += loss.item() * batch.num_graphs
@@ -772,25 +786,40 @@ for epoch in range(epochs):
 
     avg_val_loss = val_loss / len(val_loader.dataset)
 
+    # Calculate additional metrics
     val_mae = mean_absolute_error(y_val_true, y_val_pred)
     val_mre = mean_relative_error(np.array(y_val_true), np.array(y_val_pred))
     val_r2 = r2_score(y_val_true, y_val_pred)
-
-    mae.append(val_mae)
-    r.append(val_r2)
-
+    # Check if the validation loss has improved
+    if avg_val_loss < best_val_loss:
+        best_val_loss = avg_val_loss  # Update best validation loss
+        best_epoch = epoch + 1  # Save the current epoch number (1-based indexing)
+        best_model_state = model.state_dict()  # Save the current best model state
+    # Print out the results for this epoch
     print(f"Epoch {epoch + 1}/{epochs}")
     print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MRE: {train_mre:.4f}, R²: {train_r2:.4f}")
     print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MRE: {val_mre:.4f}, R²: {val_r2:.4f}")
 
 
+    mae.append(val_mae)
+    r.append(val_r2)
 
-import numpy as np
+# After the training loop, print the best epoch and its performance
+print(f"\nBest Model Performance:")
+print(f"  Best Epoch: {best_epoch}")
+print(f"  Best Validation Loss: {best_val_loss:.4f}")
+print(f"  Best Validation MAE: {val_mae:.4f}")
+print(f"  Best Validation MRE: {val_mre:.4f}")
+print(f"  Best Validation R²: {val_r2:.4f}")
+
+# Save the best model
+torch.save(best_model_state, 'best_model.pth')
+
+
 
 x1 = np.concatenate(x1, axis=0)
 x2 = np.concatenate(x2, axis=0)
 tran = np.concatenate(tran, axis=0)
-import numpy as np
 
 np.savetxt('fffx1.csv', x1, delimiter=',')
 np.savetxt('fffx2.csv', x2, delimiter=',')

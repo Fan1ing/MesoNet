@@ -15,7 +15,8 @@ from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error,me
 from rdkit.Chem import rdMolDescriptors,Crippen
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 
-csv_path = '/home/ubuntu/cmc.csv'
+csv_path = '/MesoNet/data/cmc.csv'
+
 df = pd.read_csv(csv_path)
 y1 = df['pCMC']
 smiles = df['SMILES']
