@@ -670,7 +670,7 @@ valid_size = int(0.2 * len(dataset))
 test_size = len(dataset) - train_size - valid_size
 
 train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(297)
+    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(99)
 )
 
 
@@ -790,12 +790,10 @@ for epoch in range(epochs):
 
 
 
-import numpy as np
 
 x1 = np.concatenate(x1, axis=0)
 x2 = np.concatenate(x2, axis=0)
 tran = np.concatenate(tran, axis=0)
-import numpy as np
 
 np.savetxt('fffx1.csv', x1, delimiter=',')
 np.savetxt('fffx2.csv', x2, delimiter=',')
