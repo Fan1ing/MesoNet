@@ -32,7 +32,7 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 |**absorption wavelength** | ABS.py |aboso.csv |Three independent runs |
 |**emission wavelength** | EM.py |EM.csv |Three independent runs |
 |**PLQY** | PLQY.py |PLQY.csv |Three independent runs |
-|**Two-component  Activity Coefficients ** |Activity coefficient (two-component).py |Activity coefficient (two-component)_with_inf.csv |Five-fold cross validation |
+|**Two-component  Activity Coefficients** |Activity coefficient (two-component).py |Activity coefficient (two-component)_with_inf.csv |Five-fold cross validation |
 |**Three-component Activity Coefficients** |Activity coefficient (three-component).py |Activity coefficient (three-component).csv |Five-fold cross validation |
 
 ## Running time
