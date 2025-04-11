@@ -26,6 +26,9 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 
 The generation of molecular graphs for single component and two-component datasets takes approximately a few minutes, while the activity coefficient, due to the large amount of data (greater than 100000), takes less than an hour to generate molecular graphs,all of which are created on a 10 core CPU.
 
+## Hyperparameters:
+In our training, we did not perform hyperparameter tuning for the prediction of each individual property. This is because the hyperparameters of the existing model already outperform those of the best models reported in the literature. However, in specific applications, fine-tuning the hyperparameters for each predicted property may lead to improved prediction accuracy.
+
 For the running time of the model, it takes about several tens of hours to complete the complete five fold cross validation in the prediction of activity coefficients.
 The prediction of other properties varies in time from tens of minutes to several hours
 
