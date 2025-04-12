@@ -693,16 +693,17 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
-best_val_losses = []
-best_val_maes = []
-best_val_mses = []
-best_val_r2s = []
+best_val_losses=[]
+best_val_maes=[]
+best_val_mses=[]
+best_val_r2s=[]
+
+
 
 start_fold = 0
-
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     if fold < start_fold:
-        print(f"Skipping Fold {fold+1} ")
+        print(f"Skipping Fold {fold+1}")
         continue
 
     print(f"Start Fold {fold+1}/{k_folds}")
@@ -716,10 +717,12 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     criterion = torch.nn.MSELoss()
-
-    best_val_loss = float('inf')  # Initialize the best validation loss to infinity
-    best_epoch = 0  # Initialize the epoch with the best result
-    best_model_state = None  # To store the best model state
+    best_val_loss = float('inf')
+    best_val_mae = float('inf')
+    best_val_mse = float('inf')
+    best_val_r2 = float('inf')
+    best_epoch = 0
+    best_model_state = None
 
     for epoch in range(epochs):
         model.train()
@@ -743,7 +746,6 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
             y_train_pred.extend(output.detach().cpu().numpy().flatten())
 
         avg_train_loss = total_loss / len(train_loader.dataset)
-
         train_mae = mean_absolute_error(y_train_true, y_train_pred)
         train_mse = mean_squared_error(y_train_true, y_train_pred)
         train_r2 = r2_score(y_train_true, y_train_pred)
@@ -752,6 +754,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
         val_loss = 0
         y_val_true = []
         y_val_pred = []
+        absolute_errors = []
 
         with torch.no_grad():
             for batch in val_loader:
@@ -765,56 +768,56 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
 
                 y_val_true.extend(target.cpu().numpy().flatten())
                 y_val_pred.extend(output.cpu().numpy().flatten())
+                absolute_errors.extend(np.abs(target.cpu().numpy().flatten() - output.cpu().numpy().flatten()))
 
         avg_val_loss = val_loss / len(val_loader.dataset)
-
-        # Calculate additional metrics
         val_mae = mean_absolute_error(y_val_true, y_val_pred)
         val_mse = mean_squared_error(y_val_true, y_val_pred)
         val_r2 = r2_score(y_val_true, y_val_pred)
 
-        # Check if the validation loss has improved
+        # Update the best model if current val loss is lower
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss  # Update best validation loss
-            best_epoch = epoch + 1  # Save the current epoch number (1-based indexing)
-            best_model_state = model.state_dict()  # Save the current best model state
+            best_val_mae = val_mae
+            best_val_mse = val_mse
+            best_val_r2 = val_r2
+            best_epoch = epoch + 1
+            best_model_state = model.state_dict()
 
-        # Print out the results for this epoch
-        print(f"Epoch {epoch + 1}/{epochs}")
+        print(f"Epoch {epoch+1}/{epochs}")
         print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
         print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
-    np.savetxt(f'absolute_errors_fold{fold+1}.csv', np.abs(np.array(y_val_true) - np.array(y_val_pred)))
+    # Save absolute errors for this fold
+    np.savetxt(f'absolute_errors_fold{fold+1}.csv', absolute_errors)
 
-    # After the training loop, print the best epoch and its performance
     print(f"\nBest Model Performance for Fold {fold+1}:")
     print(f"  Best Epoch: {best_epoch}")
     print(f"  Best Validation Loss: {best_val_loss:.4f}")
-    print(f"  Best Validation MAE: {val_mae:.4f}")
-    print(f"  Best Validation MSE: {val_mse:.4f}")
-    print(f"  Best Validation R²: {val_r2:.4f}")
+    print(f"  Best Validation MAE: {best_val_mae:.4f}")
+    print(f"  Best Validation MSE: {best_val_mse:.4f}")
+    print(f"  Best Validation R²: {best_val_r2:.4f}")
 
-    # Store the best results for each fold
+    # Save the best metrics for this fold
     best_val_losses.append(best_val_loss)
-    best_val_maes.append(val_mae)
-    best_val_mses.append(val_mse)
-    best_val_r2s.append(val_r2)
+    best_val_maes.append(best_val_mae)
+    best_val_mses.append(best_val_mse)
+    best_val_r2s.append(best_val_r2)
 
-    # Save the best model for this fold
+    # Save the best model for the fold
     torch.save(best_model_state, f'best_model_fold{fold+1}.pth')
 
     del model
     torch.cuda.empty_cache()
 
-# After all folds are completed, calculate and print the average of the best results
+# Calculate and print the average of the best results across all folds
 avg_best_val_loss = np.mean(best_val_losses)
 avg_best_val_mae = np.mean(best_val_maes)
 avg_best_val_mse = np.mean(best_val_mses)
 avg_best_val_r2 = np.mean(best_val_r2s)
 
-print(f"\nAverage Best Results Across All Folds:")
+print("\nAverage Best Results Across All Folds:")
 print(f"  Avg Best Validation Loss: {avg_best_val_loss:.4f}")
 print(f"  Avg Best Validation MAE: {avg_best_val_mae:.4f}")
 print(f"  Avg Best Validation MSE: {avg_best_val_mse:.4f}")
 print(f"  Avg Best Validation R²: {avg_best_val_r2:.4f}")
-

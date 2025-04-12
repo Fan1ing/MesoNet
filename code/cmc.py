@@ -563,17 +563,17 @@ val_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False, pin_memory=
 
 
 epochs = 1000
-best_val_loss = float('inf')
-best_model_state = None
 early_stopping_counter = 0
 patience = 10
 mae = []
 r = []
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-
-# Modify the existing training loop to track the best model
 best_val_loss = float('inf')  # Initialize the best validation loss to infinity
+best_val_mae = float('inf')
+best_val_mse = float('inf')
+best_val_r2 = float('inf')
+# Modify the existing training loop to track the best model
 best_epoch = 0  # Initialize the epoch with the best result
 best_model_state = None  # To store the best model state
 
@@ -637,24 +637,29 @@ for epoch in range(epochs):
     val_r2 = r2_score(y_val_true, y_val_pred)
 
     # Check if the validation loss has improved
-    if avg_val_loss < best_val_loss:
+    if val_mae < best_val_mae:
         best_val_loss = avg_val_loss  # Update best validation loss
+        best_val_mae = val_mae
+        best_val_mse = val_mse
+        best_val_r2 = val_r2
         best_epoch = epoch + 1  # Save the current epoch number (1-based indexing)
         best_model_state = model.state_dict()  # Save the current best model state
 
-    # Print out the results for this epoch       
-    print(f"Epoch {epoch + 1}/{epochs}")
-    print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
-    print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
+    mae.append(val_mae)
+    r.append(val_r2)
 
+    # Print out the results for this epoch
+    print(f"Epoch {epoch + 1}/{epochs}")
+    print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MRE: {train_mse:.4f}, R²: {train_r2:.4f}")
+    print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MRE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
 # After the training loop, print the best epoch and its performance
 print(f"\nBest Model Performance:")
 print(f"  Best Epoch: {best_epoch}")
 print(f"  Best Validation Loss: {best_val_loss:.4f}")
-print(f"  Best Validation MAE: {val_mae:.4f}")
-print(f"  Best Validation MSE: {val_mse:.4f}")
-print(f"  Best Validation R²: {val_r2:.4f}")
+print(f"  Best Validation MAE: {best_val_mae:.4f}")
+print(f"  Best Validation MSE: {best_val_mse:.4f}")
+print(f"  Best Validation R²: {best_val_r2:.4f}")
 
 # Save the best model
 torch.save(best_model_state, 'best_model.pth')

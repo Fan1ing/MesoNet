@@ -748,11 +748,14 @@ output_dim = 1
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset_size = len(dataset)
+
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
-best_val_losses = []
-best_val_maes = []
-best_val_mses = []
-best_val_r2s = []
+best_val_losses=[]
+best_val_maes=[]
+best_val_mses=[]
+best_val_r2s=[]
+
+
 
 start_fold = 0
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
@@ -771,9 +774,10 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     criterion = torch.nn.MSELoss()
-
-    # Variables to track the best performance within this fold
-    best_val_loss = float('inf')
+    best_val_loss = float('inf')  # Initialize the best validation loss to infinity
+    best_val_mae = float('inf')
+    best_val_mse = float('inf')
+    best_val_r2 = float('inf')
     best_epoch = 0
     best_model_state = None
 
@@ -830,7 +834,10 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
 
         # Update the best model if current val loss is lower
         if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
+            best_val_loss = avg_val_loss  # Update best validation loss
+            best_val_mae = val_mae
+            best_val_mse = val_mse
+            best_val_r2 = val_r2
             best_epoch = epoch + 1
             best_model_state = model.state_dict()
 
@@ -844,15 +851,15 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     print(f"\nBest Model Performance for Fold {fold+1}:")
     print(f"  Best Epoch: {best_epoch}")
     print(f"  Best Validation Loss: {best_val_loss:.4f}")
-    print(f"  Best Validation MAE: {val_mae:.4f}")
-    print(f"  Best Validation MSE: {val_mse:.4f}")
-    print(f"  Best Validation R²: {val_r2:.4f}")
+    print(f"  Best Validation MAE: {best_val_mae:.4f}")
+    print(f"  Best Validation MSE: {best_val_mse:.4f}")
+    print(f"  Best Validation R²: {best_val_r2:.4f}")
 
     # Save the best metrics for this fold
     best_val_losses.append(best_val_loss)
-    best_val_maes.append(val_mae)
-    best_val_mses.append(val_mse)
-    best_val_r2s.append(val_r2)
+    best_val_maes.append(best_val_mae)
+    best_val_mses.append(best_val_mse)
+    best_val_r2s.append(best_val_r2)
 
     # Save the best model for the fold
     torch.save(best_model_state, f'best_model_fold{fold+1}.pth')
