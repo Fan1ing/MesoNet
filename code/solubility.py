@@ -123,11 +123,11 @@ class MoleculesDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return 'Solubility.csv'
+        return 'rongjiedu.csv'
 
     @property
     def processed_file_names(self):
-        return 'Solubility.pt'
+        return 'rongjiedu.pt'
 
     def download(self):
         # Download to `self.raw_dir`.
@@ -148,15 +148,16 @@ class MoleculesDataset(InMemoryDataset):
             zeros_tensor = torch.zeros(rows, 7)
             embeddings = torch.cat((embeddings,zeros_tensor),dim = 1)
             for i in range(rows):
-        #B
-                if embeddings[i,0] == 1:
-                    embeddings[i,-1] = 2.04 #电负性
-                    embeddings[i,-2] = 82  #共价半径
-                    embeddings[i,-3] = 5   #原子序数
-                    embeddings[i,-4] = 10.82 #原子质量
-                    embeddings[i,-5] = 8.298 #第一电离能
-                    embeddings[i,-6] = 0.277 #电子亲合能
+                #B
+                if embeddings[i,0] == 1: # For Boron (B)
+                    embeddings[i,-1] = 2.04 # Electronegativity
+                    embeddings[i,-2] = 82  # Covalent radius
+                    embeddings[i,-3] = 5   # Atomic number
+                    embeddings[i,-4] = 10.82 # Atomic mass
+                    embeddings[i,-5] = 8.298 # Ionization energy
+                    embeddings[i,-6] = 0.277 # Electron affinity
                     embeddings[i,-7] = 0
+                # Continue similarly for other elements like Br, C, Cl, etc.
 
                 #Br
                 elif embeddings[i,1] == 1:
@@ -260,42 +261,42 @@ class MoleculesDataset(InMemoryDataset):
                     embeddings[i,-7] = 0
                  #P
                 elif embeddings[i,11] == 1:
-                    embeddings[i,-1] = 2.19 #电负性
-                    embeddings[i,-2] = 106  #共价半径
-                    embeddings[i,-3] = 15   #原子序数
-                    embeddings[i,-4] = 30.974 #原子质量
-                    embeddings[i,-5] = 10.487 #第一电离能
-                    embeddings[i,-6] = 0.75 #电子亲合能
+                    embeddings[i,-1] = 2.19 
+                    embeddings[i,-2] = 106  
+                    embeddings[i,-3] = 15   
+                    embeddings[i,-4] = 30.974 
+                    embeddings[i,-5] = 10.487 
+                    embeddings[i,-6] = 0.75 
                     embeddings[i,-7] = 0
 
 
                 #S
                 elif embeddings[i,12] == 1:
-                    embeddings[i,-1] = 2.58 #电负性
-                    embeddings[i,-2] = 102  #共价半径
-                    embeddings[i,-3] = 16   #原子序数
-                    embeddings[i,-4] = 32.06 #原子质量
-                    embeddings[i,-5] = 10.36 #第一电离能
-                    embeddings[i,-6] = 2.07 #电子亲合能
+                    embeddings[i,-1] = 2.58 
+                    embeddings[i,-2] = 102
+                    embeddings[i,-3] = 16  
+                    embeddings[i,-4] = 32.06 
+                    embeddings[i,-5] = 10.36
+                    embeddings[i,-6] = 2.07
                     embeddings[i,-7] = 0
 
                 #Se
                 elif embeddings[i,13] == 1:
-                    embeddings[i,-1] = 2.55 #电负性
-                    embeddings[i,-2] = 116  #共价半径
-                    embeddings[i,-3] = 34   #原子序数
-                    embeddings[i,-4] = 78.971 #原子质量
-                    embeddings[i,-5] = 9.753 #第一电离能
-                    embeddings[i,-6] = 2.02 #电子亲合能
+                    embeddings[i,-1] = 2.55 
+                    embeddings[i,-2] = 116  
+                    embeddings[i,-3] = 34   
+                    embeddings[i,-4] = 78.971 
+                    embeddings[i,-5] = 9.753 
+                    embeddings[i,-6] = 2.02 
                     embeddings[i,-7] = 0
                 #Si
                 elif embeddings[i,14] == 1:
-                    embeddings[i,-1] = 1.90 #电负性
-                    embeddings[i,-2] = 111  #共价半径
-                    embeddings[i,-3] = 14   #原子序数
-                    embeddings[i,-4] = 28.085 #原子质量
-                    embeddings[i,-5] = 8.151 #第一电离能
-                    embeddings[i,-6] = 1.385 #电子亲合能
+                    embeddings[i,-1] = 1.90 
+                    embeddings[i,-2] = 111 
+                    embeddings[i,-3] = 14   
+                    embeddings[i,-4] = 28.085 
+                    embeddings[i,-5] = 8.151 
+                    embeddings[i,-6] = 1.385
                     embeddings[i,-7] = 0
 
 
@@ -327,25 +328,25 @@ class MoleculesDataset(InMemoryDataset):
 
             y = torch.tensor(y,dtype=torch.float32)
             functional_groups_smarts = {
-                "hydroxyl": "[OX2H]",            # 羟基
-                "carboxyl": "C(=O)O",            # 羧基
-                "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
-                "ester": "C(=O)O[C]",               # 酯
-                "phenyl": "c1ccccc1",            # 苯基
-                "aldehyde": "C=O",               # 醛基
-                "ketone": "C(=O)C",              # 酮基
-                "methyl": "C",                   # 甲基
-                "amide": "C(=O)N",               # 酰胺
-                "nitrile": "C#N",                # 腈基
-                "sulfhydryl": "[C-SH]",          # 硫醇基
-                "sulfone": "S(=O)(=O)C",         # 硫酰基
-                "phosphate": "P(=O)(O)O",        # 磷酸酯
-                "halide": "[F,Cl,Br,I]",         # 卤素
-                "acetal": "C(O)C",               # 醛基乙醇
-                "alkyne": "C#C",                 # 炔烃
-                "nitro": "N(=O)=O",                  # 硝基
-                "ether": "C-O-C",                    # 醚
-                "alkene": "C=C",                     # 烯烃
+                "hydroxyl": "[OX2H]",           
+                "carboxyl": "C(=O)O",        
+                "amine": "[NX3;H2,H1;!$(NC=O)]",
+                "ester": "C(=O)O[C]",           
+                "phenyl": "c1ccccc1",          
+                "aldehyde": "C=O",             
+                "ketone": "C(=O)C",            
+                "methyl": "C",               
+                "amide": "C(=O)N",         
+                "nitrile": "C#N",          
+                "sulfhydryl": "[C-SH]",      
+                "sulfone": "S(=O)(=O)C",      
+                "phosphate": "P(=O)(O)O",      
+                "halide": "[F,Cl,Br,I]",         
+                "acetal": "C(O)C",            
+                "alkyne": "C#C",             
+                "nitro": "N(=O)=O",           
+                "ether": "C-O-C",             
+                "alkene": "C=C", 
             }
 
             functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
@@ -353,17 +354,14 @@ class MoleculesDataset(InMemoryDataset):
             for name, smarts in functional_groups_smarts.items():
                 patt = Chem.MolFromSmarts(smarts)
                 if patt is None:
-                    raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+                    raise ValueError(f"Invalid SMARTS mode: {smarts}")
                 matches = mol.GetSubstructMatches(patt)
                 if matches:
                     functional_groups_count[name] = len(matches)
 
-            # 将官能团数量添加到特征向量中
+            #  Add functional group counts to the feature vector
             global_features = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
 
-            # 将所有特征（如num_donors, num_acceptors, logp, tpsa）组合到一个向量中
-
-            # 将global_features2加入到global_features中
 
             data = Data(x=embeddings, y=y, edge_index=edges, edge_attr=edge_attr,global_features=global_features)
             datas.append(data)
@@ -372,7 +370,7 @@ class MoleculesDataset(InMemoryDataset):
         torch.save(self.collate(datas), self.processed_paths[0])
 
 max_nodes = 128
-dataset = MoleculesDataset(root= "Solubility")
+dataset = MoleculesDataset(root= "rongjiedu")
 
 
 
@@ -558,6 +556,11 @@ r = []
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+# Modify the existing training loop to track the best model
+best_val_loss = float('inf')  # Initialize the best validation loss to infinity
+best_epoch = 0  # Initialize the epoch with the best result
+best_model_state = None  # To store the best model state
+
 for epoch in range(epochs):
 
     model.train()
@@ -613,13 +616,32 @@ for epoch in range(epochs):
 
     avg_val_loss = val_loss / len(val_loader.dataset)
 
+    # Calculate additional metrics
     val_mae = mean_absolute_error(y_val_true, y_val_pred)
     val_mse = mean_squared_error(y_val_true, y_val_pred)
     val_r2 = r2_score(y_val_true, y_val_pred)
 
+    # Check if the validation loss has improved
+    if avg_val_loss < best_val_loss:
+        best_val_loss = avg_val_loss  # Update best validation loss
+        best_epoch = epoch + 1  # Save the current epoch number (1-based indexing)
+        best_model_state = model.state_dict()  # Save the current best model state
+
+    # Print out the results for this epoch    
     print(f"Epoch {epoch + 1}/{epochs}")
     print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
     print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
+
+# After the training loop, print the best epoch and its performance
+print(f"\nBest Model Performance:")
+print(f"  Best Epoch: {best_epoch}")
+print(f"  Best Validation Loss: {best_val_loss:.4f}")
+print(f"  Best Validation MAE: {val_mae:.4f}")
+print(f"  Best Validation MSE: {val_mse:.4f}")
+print(f"  Best Validation R²: {val_r2:.4f}")
+
+# Save the best model
+torch.save(best_model_state, 'best_model.pth')
 
 x1 = np.concatenate(x1, axis=0)
 x2 = np.concatenate(x2, axis=0)

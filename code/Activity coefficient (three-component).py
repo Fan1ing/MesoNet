@@ -280,29 +280,29 @@ def process_molecule(smiles):
     edge_attr = torch.tensor(edge_features, dtype=torch.float32)
 
     functional_groups_smarts = {
-        "hydroxyl": "[OX2H]",            # 羟基
-        "carboxyl": "C(=O)O",            # 羧基
-        "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
-        "ester": "C(=O)O",               # 酯
-        "phenyl": "c1ccccc1",            # 苯基
-        "aldehyde": "C=O",               # 醛基
-        "ketone": "C(=O)C",              # 酮基
-        "methyl": "C",                   # 甲基
-        "amide": "C(=O)N",               # 酰胺
-        "nitrile": "C#N",                # 腈基
-        "sulfhydryl": "[C-SH]",          # 硫醇基
-        "sulfone": "S(=O)(=O)C",         # 硫酰基
-        "phosphate": "P(=O)(O)O",        # 磷酸酯
-        "halide": "[F,Cl,Br,I]",         # 卤素
-        "acetal": "C(O)C",               # 醛基乙醇
-        "benzene": "c1ccccc1",           # 苯环
-        "thiol": "[C-SH]",               # 硫醇基团
-        "alkyne": "C#C",                 # 炔烃
-        "nitro": "N(=O)=O",                  # 硝基
-        "ether": "C-O-C",                    # 醚
-        "alkene": "C=C",                     # 烯烃
-        "Na+_ion": "[Na+1]",             # 钠离子 (Na+)
-        "K+_ion": "[K+1]",               # 钾离子 (K+)
+        "hydroxyl": "[OX2H]",
+        "carboxyl": "C(=O)O",
+        "amine": "[NX3;H2,H1;!$(NC=O)]",
+        "ester": "C(=O)O",
+        "phenyl": "c1ccccc1",
+        "aldehyde": "C=O",
+        "ketone": "C(=O)C",
+        "methyl": "C",
+        "amide": "C(=O)N",
+        "nitrile": "C#N",
+        "sulfhydryl": "[C-SH]",
+        "sulfone": "S(=O)(=O)C",
+        "phosphate": "P(=O)(O)O",
+        "halide": "[F,Cl,Br,I]",
+        "acetal": "C(O)C",
+        "benzene": "c1ccccc1",
+        "thiol": "[C-SH]",
+        "alkyne": "C#C", 
+        "nitro": "N(=O)=O",
+        "ether": "C-O-C",
+        "alkene": "C=C",
+        "Na+_ion": "[Na+1]",       
+        "K+_ion": "[K+1]",      
     }
 
     functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
@@ -310,18 +310,18 @@ def process_molecule(smiles):
     for name, smarts in functional_groups_smarts.items():
         patt = Chem.MolFromSmarts(smarts)
         if patt is None:
-            raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+            raise ValueError(f"Invalid SMARTS pattern: {smarts}")
         matches = mol.GetSubstructMatches(patt)
         if matches:
             functional_groups_count[name] = len(matches)
 
-    # 将官能团数量添加到特征向量中
+    # Adds the number of functional groups to the feature vector
     global_features2 = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
 
-    # 将所有特征（如num_donors, num_acceptors, logp, tpsa）组合到一个向量中
+    # Combine all features (such as num_donors, num_acceptors, logp, tpsa) into a vector
     global_features1 = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
 
-    # 将global_features2加入到global_features中
+    # Add global_features2 to global_features
     global_features = torch.cat((global_features1, global_features2), dim=1)
 
     return Data(x=node_features, edge_index=edge_index, edge_attr=edge_attr, global_features=global_features)
@@ -367,7 +367,7 @@ def combine_molecules(smiles1, smiles2, smiles3=None, x1=None, x2=None, x3=None)
         [x3, x1, x2]],dtype=torch.float32
     )
 
-    # 生成掩码
+    # Generation mask
     mask1 = torch.zeros(combined_x.size(0), dtype=torch.bool)
     mask1[:graph1.x.size(0)] = True
 
@@ -601,7 +601,7 @@ class MesoNet(nn.Module):
         transformer_outputs =transformer_output
 
 
-        # 合并处理特征
+        # Merge processing feature
 
 
         xm = torch.cat((x1, x2_output), dim=1)
@@ -618,7 +618,7 @@ class MesoNet(nn.Module):
         xm = torch.cat((xm,xmm),dim=1)
         xm = self.last(xm)
         xm = self.relu(xm)
-        # 图卷积处理
+        # Graph convolution processing
         subgraph_x = self.subgraph_conv1(xm, subgraph_edge_index, subgraph_edge_attr)
         subgraph_x = self.relu(subgraph_x)
         subgraph_x = self.subgraph_conv2(subgraph_x, subgraph_edge_index, subgraph_edge_attr)
@@ -681,7 +681,7 @@ class MesoNet(nn.Module):
         expanded_x[2::3] = subgraph3_x
         expanded_x =torch.cat((expanded_x, global_node_attr), dim=1)
 
-        combined_x = self.global_conv(expanded_x, global_edge_index, global_edge_attr.to(expanded_x.device))  # 确保边属性在同一设备上
+        combined_x = self.global_conv(expanded_x, global_edge_index, global_edge_attr.to(expanded_x.device))  # Make sure the edge properties are on the same device
         combined_x =self.relu(combined_x)
         num_classes = batch_size
         repeats_per_class = 3
@@ -731,7 +731,7 @@ train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
 '''
 from sklearn.model_selection import KFold
 import torch
-from torch_geometric.loader import DataLoader  # 改成 PyG 的 DataLoader
+from torch_geometric.loader import DataLoader  # Change to PyG DataLoader
 from torch.utils.data import Subset
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
@@ -749,14 +749,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
+best_val_losses = []
+best_val_maes = []
+best_val_mses = []
+best_val_r2s = []
 
-start_fold = 1
+start_fold = 0
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     if fold < start_fold:
-        print(f"Skipping Fold {fold+1} ")
+        print(f"Skipping Fold {fold+1}")
         continue
 
-    print(f"start Fold {fold+1}/{k_folds}")
+    print(f"Start Fold {fold+1}/{k_folds}")
 
     train_subset = [dataset[i] for i in train_idx]
     val_subset = [dataset[i] for i in val_idx]
@@ -767,6 +771,11 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     criterion = torch.nn.MSELoss()
+
+    # Variables to track the best performance within this fold
+    best_val_loss = float('inf')
+    best_epoch = 0
+    best_model_state = None
 
     for epoch in range(epochs):
         model.train()
@@ -790,7 +799,6 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
             y_train_pred.extend(output.detach().cpu().numpy().flatten())
 
         avg_train_loss = total_loss / len(train_loader.dataset)
-
         train_mae = mean_absolute_error(y_train_true, y_train_pred)
         train_mse = mean_squared_error(y_train_true, y_train_pred)
         train_r2 = r2_score(y_train_true, y_train_pred)
@@ -813,20 +821,54 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
 
                 y_val_true.extend(target.cpu().numpy().flatten())
                 y_val_pred.extend(output.cpu().numpy().flatten())
-                absolute_errors.extend(abs(target.cpu().numpy().flatten() - output.cpu().numpy().flatten()))
+                absolute_errors.extend(np.abs(target.cpu().numpy().flatten() - output.cpu().numpy().flatten()))
 
         avg_val_loss = val_loss / len(val_loader.dataset)
-
         val_mae = mean_absolute_error(y_val_true, y_val_pred)
         val_mse = mean_squared_error(y_val_true, y_val_pred)
         val_r2 = r2_score(y_val_true, y_val_pred)
 
-        print(f"Epoch {epoch + 1}/{epochs}")
+        # Update the best model if current val loss is lower
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            best_epoch = epoch + 1
+            best_model_state = model.state_dict()
+
+        print(f"Epoch {epoch+1}/{epochs}")
         print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
         print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
+    # Save absolute errors for this fold
     np.savetxt(f'absolute_errors_fold{fold+1}.csv', absolute_errors)
+
+    print(f"\nBest Model Performance for Fold {fold+1}:")
+    print(f"  Best Epoch: {best_epoch}")
+    print(f"  Best Validation Loss: {best_val_loss:.4f}")
+    print(f"  Best Validation MAE: {val_mae:.4f}")
+    print(f"  Best Validation MSE: {val_mse:.4f}")
+    print(f"  Best Validation R²: {val_r2:.4f}")
+
+    # Save the best metrics for this fold
+    best_val_losses.append(best_val_loss)
+    best_val_maes.append(val_mae)
+    best_val_mses.append(val_mse)
+    best_val_r2s.append(val_r2)
+
+    # Save the best model for the fold
+    torch.save(best_model_state, f'best_model_fold{fold+1}.pth')
 
     del model
     torch.cuda.empty_cache()
+
+# Calculate and print the average of the best results across all folds
+avg_best_val_loss = np.mean(best_val_losses)
+avg_best_val_mae = np.mean(best_val_maes)
+avg_best_val_mse = np.mean(best_val_mses)
+avg_best_val_r2 = np.mean(best_val_r2s)
+
+print("\nAverage Best Results Across All Folds:")
+print(f"  Avg Best Validation Loss: {avg_best_val_loss:.4f}")
+print(f"  Avg Best Validation MAE: {avg_best_val_mae:.4f}")
+print(f"  Avg Best Validation MSE: {avg_best_val_mse:.4f}")
+print(f"  Avg Best Validation R²: {avg_best_val_r2:.4f}")
 

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset
-from torch_geometric.loader import DataLoader  # 更新导入路径
+from torch_geometric.loader import DataLoader  # Updated import path
 from torch_geometric.nn import NNConv, Set2Set
 import torch.nn as nn
 from rdkit import Chem
@@ -14,6 +14,7 @@ from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDec
 from ncps.wirings import AutoNCP
 triple_csv_path = '/MesoNet/data/output_binary_with_inf_all.csv'
 
+# Class to handle feature encoding of molecules
 class Featurizer:
     def __init__(self, allowable_sets):
         self.dim = 0
@@ -32,6 +33,7 @@ class Featurizer:
             output[feature_mapping[feature]] = 1.0
         return output
 
+# Atom-level featurization class
 class AtomFeaturizer(Featurizer):
     def __init__(self, allowable_sets):
         super().__init__(allowable_sets)
@@ -57,6 +59,7 @@ class AtomFeaturizer(Featurizer):
     def formal_charge(self, atom):
         return atom.GetFormalCharge()
 
+# Bond-level featurization class
 class BondFeaturizer(Featurizer):
     def __init__(self, allowable_sets):
         super().__init__(allowable_sets)
@@ -81,6 +84,7 @@ class BondFeaturizer(Featurizer):
     def ring(self, bond):
         return bond.IsInRing()
 
+# Atom featurizer with predefined atom properties
 atom_featurizer = AtomFeaturizer(
     allowable_sets={
         "symbol": {"B", "Br", "C", "Cl", "F", "Ge", "H", "I", "N", "Na", "O", "P", "S", "Se", "Si", "Te"},
@@ -93,6 +97,7 @@ atom_featurizer = AtomFeaturizer(
     }
 )
 
+# Bond featurizer with predefined bond properties
 bond_featurizer = BondFeaturizer(
     allowable_sets={
         "bond_type": {"single", "double", "triple", "aromatic"},
@@ -102,6 +107,7 @@ bond_featurizer = BondFeaturizer(
     }
 )
 
+# Molecule processing function to convert SMILES to graph data
 def process_molecule(smiles):
     mol = Chem.MolFromSmiles(smiles)
 
@@ -121,6 +127,7 @@ def process_molecule(smiles):
     zeros_tensor = torch.zeros(rows, 6)
     node_features = torch.cat((node_features, zeros_tensor), dim=1)
 
+    # Adding atomic properties to features
     for i in range(rows):
         # B
         if node_features[i, 0] == 1:
@@ -268,6 +275,7 @@ def process_molecule(smiles):
 
     node_features = torch.tensor(node_features, dtype=torch.float32)
 
+    # Create edge index and edge attributes for graph
     edges = []
     edge_features = []
     for bond in mol.GetBonds():
@@ -280,27 +288,27 @@ def process_molecule(smiles):
     edge_attr = torch.tensor(edge_features, dtype=torch.float32)
 
     functional_groups_smarts = {
-        "hydroxyl": "[OX2H]",            # 羟基
-        "carboxyl": "C(=O)O",            # 羧基
-        "amine": "[NX3;H2,H1;!$(NC=O)]", # 胺
-        "ester": "C(=O)O",               # 酯
-        "phenyl": "c1ccccc1",            # 苯基
-        "aldehyde": "C=O",               # 醛基
-        "ketone": "C(=O)C",              # 酮基
-        "methyl": "C",                   # 甲基
-        "amide": "C(=O)N",               # 酰胺
-        "nitrile": "C#N",                # 腈基
-        "sulfhydryl": "[C-SH]",          # 硫醇基
-        "sulfone": "S(=O)(=O)C",         # 硫酰基
-        "phosphate": "P(=O)(O)O",        # 磷酸酯
-        "halide": "[F,Cl,Br,I]",         # 卤素
-        "acetal": "C(O)C",               # 醛基乙醇
-        "benzene": "c1ccccc1",           # 苯环
-        "thiol": "[C-SH]",               # 硫醇基团
-        "alkyne": "C#C",                 # 炔烃
-        "nitro": "N(=O)=O",                  # 硝基
-        "ether": "C-O-C",                    # 醚
-        "alkene": "C=C",                     # 烯烃
+        "hydroxyl": "[OX2H]",
+        "carboxyl": "C(=O)O",
+        "amine": "[NX3;H2,H1;!$(NC=O)]",
+        "ester": "C(=O)O",
+        "phenyl": "c1ccccc1",
+        "aldehyde": "C=O",
+        "ketone": "C(=O)C",
+        "methyl": "C",
+        "amide": "C(=O)N",
+        "nitrile": "C#N",
+        "sulfhydryl": "[C-SH]",
+        "sulfone": "S(=O)(=O)C",
+        "phosphate": "P(=O)(O)O",
+        "halide": "[F,Cl,Br,I]",
+        "acetal": "C(O)C",
+        "benzene": "c1ccccc1",
+        "thiol": "[C-SH]",
+        "alkyne": "C#C", 
+        "nitro": "N(=O)=O",
+        "ether": "C-O-C",
+        "alkene": "C=C",
     }
 
     functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
@@ -308,24 +316,24 @@ def process_molecule(smiles):
     for name, smarts in functional_groups_smarts.items():
         patt = Chem.MolFromSmarts(smarts)
         if patt is None:
-            raise ValueError(f"无效的 SMARTS 模式: {smarts}")
+            raise ValueError(f"Invalid SMARTS pattern: {smarts}")
         matches = mol.GetSubstructMatches(patt)
         if matches:
             functional_groups_count[name] = len(matches)
 
-    # 将官能团数量添加到特征向量中
+    # Adds the number of functional groups to the feature vector
     global_features2 = torch.tensor(list(functional_groups_count.values()), dtype=torch.float32).unsqueeze(0)
 
-    # 将所有特征（如num_donors, num_acceptors, logp, tpsa）组合到一个向量中
+    # Combine all features (such as num_donors, num_acceptors, logp, tpsa) into a vector
     global_features1 = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
 
-    # 将global_features2加入到global_features中
+    # Add global_features2 to global_features
     global_features = torch.cat((global_features1, global_features2), dim=1)
 
     return Data(x=node_features, edge_index=edge_index, edge_attr=edge_attr, global_features=global_features)
 
 
-
+# Combine two molecules into a single graph
 def combine_molecules(smiles1, smiles2, x1, x2):
 
     graph1 = process_molecule(smiles1)
@@ -364,9 +372,7 @@ def combine_molecules(smiles1, smiles2, x1, x2):
     )
 
 
-
-
-
+# Load data from CSV for training
 def load_data(triple_csv_path):
     triple_df = pd.read_csv(triple_csv_path)
 
@@ -387,7 +393,7 @@ def load_data(triple_csv_path):
 
     return smiles1, smiles2,  targets_triple, concentrations
 
-
+# Dataset class for handling molecule data
 class MoleculesDataset(InMemoryDataset):
     def __init__(self, root, smiles1, smiles2,  targets, concentrations, transform=None, pre_transform=None):
         self.smiles1 = smiles1
@@ -427,6 +433,7 @@ class MoleculesDataset(InMemoryDataset):
 
         torch.save(self.collate(datas), self.processed_paths[0])
 
+# Example path to dataset
 
 smiles1, smiles2,  targets, concentrations = load_data(triple_csv_path)
 
@@ -617,7 +624,7 @@ class MesoNet(nn.Module):
 
 
 
-        combined_x = self.global_conv(expanded_x, global_edge_index, global_edge_attr.to(expanded_x.device))  # 确保边属性在同一设备上
+        combined_x = self.global_conv(expanded_x, global_edge_index, global_edge_attr.to(expanded_x.device))  # Make sure the edge properties are on the same device
         num_classes = batch_size
         repeats_per_class = 2
         combined_x = self.relu(combined_x)
@@ -686,13 +693,19 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=2021)
+best_val_losses = []
+best_val_maes = []
+best_val_mses = []
+best_val_r2s = []
+
 start_fold = 0
+
 for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     if fold < start_fold:
         print(f"Skipping Fold {fold+1} ")
         continue
 
-    print(f"start Fold {fold+1}/{k_folds}")
+    print(f"Start Fold {fold+1}/{k_folds}")
 
     train_subset = [dataset[i] for i in train_idx]
     val_subset = [dataset[i] for i in val_idx]
@@ -703,6 +716,10 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
     model = MesoNet(input_dim, edge_dim, hidden_dim, output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     criterion = torch.nn.MSELoss()
+
+    best_val_loss = float('inf')  # Initialize the best validation loss to infinity
+    best_epoch = 0  # Initialize the epoch with the best result
+    best_model_state = None  # To store the best model state
 
     for epoch in range(epochs):
         model.train()
@@ -735,7 +752,6 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
         val_loss = 0
         y_val_true = []
         y_val_pred = []
-        absolute_errors = []
 
         with torch.no_grad():
             for batch in val_loader:
@@ -749,20 +765,56 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
 
                 y_val_true.extend(target.cpu().numpy().flatten())
                 y_val_pred.extend(output.cpu().numpy().flatten())
-                absolute_errors.extend(abs(target.cpu().numpy().flatten() - output.cpu().numpy().flatten()))
 
         avg_val_loss = val_loss / len(val_loader.dataset)
 
+        # Calculate additional metrics
         val_mae = mean_absolute_error(y_val_true, y_val_pred)
         val_mse = mean_squared_error(y_val_true, y_val_pred)
         val_r2 = r2_score(y_val_true, y_val_pred)
 
+        # Check if the validation loss has improved
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss  # Update best validation loss
+            best_epoch = epoch + 1  # Save the current epoch number (1-based indexing)
+            best_model_state = model.state_dict()  # Save the current best model state
+
+        # Print out the results for this epoch
         print(f"Epoch {epoch + 1}/{epochs}")
         print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
         print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
-    np.savetxt(f'absolute_errors_fold{fold+1}.csv', absolute_errors)
+    np.savetxt(f'absolute_errors_fold{fold+1}.csv', np.abs(np.array(y_val_true) - np.array(y_val_pred)))
+
+    # After the training loop, print the best epoch and its performance
+    print(f"\nBest Model Performance for Fold {fold+1}:")
+    print(f"  Best Epoch: {best_epoch}")
+    print(f"  Best Validation Loss: {best_val_loss:.4f}")
+    print(f"  Best Validation MAE: {val_mae:.4f}")
+    print(f"  Best Validation MSE: {val_mse:.4f}")
+    print(f"  Best Validation R²: {val_r2:.4f}")
+
+    # Store the best results for each fold
+    best_val_losses.append(best_val_loss)
+    best_val_maes.append(val_mae)
+    best_val_mses.append(val_mse)
+    best_val_r2s.append(val_r2)
+
+    # Save the best model for this fold
+    torch.save(best_model_state, f'best_model_fold{fold+1}.pth')
 
     del model
     torch.cuda.empty_cache()
+
+# After all folds are completed, calculate and print the average of the best results
+avg_best_val_loss = np.mean(best_val_losses)
+avg_best_val_mae = np.mean(best_val_maes)
+avg_best_val_mse = np.mean(best_val_mses)
+avg_best_val_r2 = np.mean(best_val_r2s)
+
+print(f"\nAverage Best Results Across All Folds:")
+print(f"  Avg Best Validation Loss: {avg_best_val_loss:.4f}")
+print(f"  Avg Best Validation MAE: {avg_best_val_mae:.4f}")
+print(f"  Avg Best Validation MSE: {avg_best_val_mse:.4f}")
+print(f"  Avg Best Validation R²: {avg_best_val_r2:.4f}")
 
