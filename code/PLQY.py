@@ -647,7 +647,7 @@ class MoleculesDataset(InMemoryDataset):
     @property
     def processed_file_names(self):
 
-        return ['dataff.pt']
+        return ['dataPLQY.pt']
 
     def download(self):
 
@@ -663,7 +663,7 @@ class MoleculesDataset(InMemoryDataset):
             datas.append(data)
 
         torch.save(self.collate(datas), self.processed_paths[0])
-dataset = MoleculesDataset(root="dataff", smiles1=smiles1, smiles2=smiles2, ys=ys)
+dataset = MoleculesDataset(root="dataPLQY", smiles1=smiles1, smiles2=smiles2, ys=ys)
 print(len(dataset))
 train_size = int(0.8 * len(dataset))
 valid_size = int(0.2 * len(dataset))

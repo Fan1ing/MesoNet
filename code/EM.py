@@ -674,7 +674,7 @@ valid_size = int(0.2 * len(dataset))
 test_size = len(dataset) - train_size - valid_size
 
 train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(297)
+    dataset, [train_size, valid_size, test_size], generator=torch.Generator().manual_seed(99)
 )
 
 
