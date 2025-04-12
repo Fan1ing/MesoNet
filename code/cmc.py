@@ -650,8 +650,8 @@ for epoch in range(epochs):
 
     # Print out the results for this epoch
     print(f"Epoch {epoch + 1}/{epochs}")
-    print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MRE: {train_mse:.4f}, R²: {train_r2:.4f}")
-    print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MRE: {val_mse:.4f}, R²: {val_r2:.4f}")
+    print(f"  Train Loss: {avg_train_loss:.4f}, MAE: {train_mae:.4f}, MSE: {train_mse:.4f}, R²: {train_r2:.4f}")
+    print(f"  Val Loss: {avg_val_loss:.4f}, MAE: {val_mae:.4f}, MSE: {val_mse:.4f}, R²: {val_r2:.4f}")
 
 # After the training loop, print the best epoch and its performance
 print(f"\nBest Model Performance:")
