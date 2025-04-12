@@ -18,22 +18,26 @@ The following are the required Python libraries to be installed：numpy、pandas
 
 
 ## Data preparation
-To facilitate the reproduction of our results, you only need to directly execute the code for each predicted property (this requires adjusting the CSV file path for the corresponding dataset to your local path). The code will generate the graph dataset and then proceed to the next step of prediction. The code will output and print the errors for the training and test sets.
+To facilitate the reproduction of our results, you only need to directly execute the code for each predicted property (this requires adjusting the CSV file path for the corresponding dataset to your local path). The code will generate the graph dataset (A file package containing a pt file) and then proceed to the next step of prediction. The code will output and print the errors for the training and test sets.
 
 If you wish to use your own dataset for prediction, simply prepare the required molecular SMILES format and its properties for prediction, and then process the data into the same format as the one we provided.
+
+## The following table shows an example of processing the activity coefficients of three components
+|solv1_x|solv2_x|solv3_x|solv1_gamma|solv2_gamma|solv3_gamma|solv1_smiles|solv2_smiles|solv3_smiles|
+
 ## The following table shows the code and data files for different predicted properties
 
-|properties |code name|dataset name |note |
-|----------------|--------------------------------|--------------------------------|--------------------------------|
-|**Solubility** | Solubility.py |Solubility.csv |A random run |
-|**CMC** | cmc.py |cmc.csv |Specific dataset partitioning |
-|**Lipophilicity** | lipophilicity.py |lipophilicity.csv |Three independent runs |
-|**Ionization Energy (IE)** | IE.py |IE.csv |Three independent runs|
-|**absorption wavelength** | ABS.py |aboso.csv |Three independent runs |
-|**emission wavelength** | EM.py |EM.csv |Three independent runs |
-|**PLQY** | PLQY.py |PLQY.csv |Three independent runs |
-|**Two-component  Activity Coefficients ** |Activity coefficient (two-component).py |Activity coefficient (two-component)_with_inf.csv |Five-fold cross validation |
-|**Three-component Activity Coefficients** |Activity coefficient (three-component).py |Activity coefficient (three-component).csv |Five-fold cross validation |
+|properties |code name|dataset name |note |dataset size |
+|----------------|--------------------------------|--------------------------------|--------------------------------|--------------------------------|
+|**Solubility** | Solubility.py |Solubility.csv |A random run |8438 |
+|**CMC** | cmc.py |cmc.csv |Specific dataset partitioning |1984 |
+|**Lipophilicity** | lipophilicity.py |lipophilicity.csv |Three independent runs |4200 |
+|**Ionization Energy (IE)** | IE.py |IE.csv |Three independent runs|2147 |
+|**absorption wavelength** | ABS.py |aboso.csv |Three independent runs |3943 |
+|**emission wavelength** | EM.py |EM.csv |Three independent runs |4038 |
+|**PLQY** | PLQY.py |PLQY.csv |Three independent runs |2831 |
+|**Two-component  Activity Coefficients** |Activity coefficient (two-component).py |Activity coefficient (two-component)_with_inf.csv |Five-fold cross validation |280000 (with inf),200000(without inf) |
+|**Three-component Activity Coefficients** |Activity coefficient (three-component).py |Activity coefficient (three-component).csv |Five-fold cross validation |160000 |
 
 
 
