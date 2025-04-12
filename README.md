@@ -24,9 +24,10 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 
 ## The following table shows an example of processing the activity coefficients of three components
 |solv1_x|solv2_x|solv3_x|solv1_gamma|solv2_gamma|solv3_gamma|solv1_smiles|solv2_smiles|solv3_smiles|
+|----------------|----------|----------|----------|----------|----------|----------|----------|----------|
+
 
 ## The following table shows the code and data files for different predicted properties
-
 |properties |code name|dataset name |note |dataset size |
 |----------------|--------------------------------|--------------------------------|--------------------------------|--------------------------------|
 |**Solubility** | Solubility.py |Solubility.csv |A random run |8438 |
@@ -44,11 +45,11 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 ## Running time
 
 The generation of molecular graphs for single component and two-component datasets takes approximately a few minutes, while the activity coefficient, due to the large amount of data (greater than 100000), takes less than an hour to generate molecular graphs,all of which are created on a 10 core CPU.
-
 For the running time of the model, it takes about several tens of hours to complete the complete five fold cross validation in the prediction of activity coefficients.
 The prediction of other properties varies in time from tens of minutes to several hours.
 
-## Hyperparameters
+
+## Hyperparameters:
 In our training, we did not perform hyperparameter tuning for the prediction of each individual property. This is because the hyperparameters of the existing model already outperform those of the best models reported in the literature. However, in specific applications, fine-tuning the hyperparameters for each predicted property may lead to improved prediction accuracy.
 
 ## Continuously updated
