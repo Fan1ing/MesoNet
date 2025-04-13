@@ -49,8 +49,11 @@ For the running time of the model, it takes about several tens of hours to compl
 The prediction of other properties varies in time from tens of minutes to several hours.
 
 
-## Hyperparameters:
-In our training, we did not perform hyperparameter tuning for the prediction of each individual property. This is because the hyperparameters of the existing model already outperform those of the best models reported in the literature. However, in specific applications, fine-tuning the hyperparameters for each predicted property may lead to improved prediction accuracy.
+## Hyperparameters and model prediction:
+In our training, we did not perform hyperparameter tuning on the validation set for each individual attribute prediction and then make predictions on the test set. In single component, two-component, and three component prediction, we select the same hyperparameters (learning rate, number of neurons, network architecture, etc.) and directly use the training set for training and predicting the test set (validation set).
+In model prediction, error printing is performed directly on the training and testing sets to observe the changes in training and prediction errors. Alternatively, the overall training error and best results can be saved.
+ps： In practical applications, tuning hyperparameters for each property may increase the predictive performance of the model, but we did not do so because the training time was too long and the predictive performance was already better than the models reported in the literature.
+
 
 ## Continuously updated
 We will continue to update data and models in the future. If you have any questions, please contact my email: fanjinming@zju.edu.cn
