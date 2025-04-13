@@ -31,7 +31,7 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 |properties |code name|dataset name |note |dataset size |
 |----------------|--------------------------------|--------------------------------|--------------------------------|--------------------------------|
 |**Solubility** | Solubility.py |Solubility.csv |A random run |8438 |
-|**CMC** | cmc.py |cmc.csv |Specific dataset partitioning |1984 |
+|**CMC** | cmc.py |cmc.csv |Specific dataset partitioning |1395 |
 |**Lipophilicity** | lipophilicity.py |lipophilicity.csv |Three independent runs |4200 |
 |**Ionization Energy (IE)** | IE.py |IE.csv |Three independent runs|2147 |
 |**absorption wavelength** | ABS.py |aboso.csv |Three independent runs |3943 |
