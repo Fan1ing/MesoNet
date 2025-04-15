@@ -20,7 +20,7 @@ This cross-component modeling capability is a key strength, as it bridges the co
 Unified Modeling Results Across Different Components
 ## Unified Modeling Results Across Different Components
 **RMSE for activity coefficient prediction.**
-|model|two-component |two-component|merged |
+|model|two-component |three-component|merged |
 |----------------|--------------------------------|--------------------------------|--------------------------------|
 |SlvGNN | 0.077 |0.072 |unpredictable |
 |NGNN | 0.064 |0.084 |unpredictable |
