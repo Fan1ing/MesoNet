@@ -7,7 +7,7 @@ Key features include:
 2) **Unified representation learning** enabling seamless cross-component generalization  
 3) **Attention mechanisms** that quantify contribution weights of molecular subgroups  
 
-The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction thermodynamics. Its architecture specifically addresses the "compositional gap" between binary and ternary systems through innovative feature embedding.  
+The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction. Its architecture specifically addresses the "compositional gap" between binary and ternary systems through innovative feature embedding.  
 
 For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
 
