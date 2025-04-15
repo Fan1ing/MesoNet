@@ -3,11 +3,27 @@
 For more design concepts and details of the model, please refer to Article  ***Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay ***
 ![Model principle](picture/Fig1.png)
 
-![Model principle](picture/Fig2.png)
 
-# Overview
+# Overview and Supporting Information
 
 Here are the details about the model.
+![Model principle](picture/Fig2.png)
+###Advantage: Our model is capable of simultaneously modeling the combination of different components, instead of modeling different components separately.
+
+## RMSE for activity coefficient prediction.
+|model|two-component |two-component|merged |
+|----------------|--------------------------------|--------------------------------|--------------------------------|
+|**SlvGNN** | 0.077 |0.072 |unpredictable |
+|**NGNN** | 0.064 |0.084 |unpredictable |
+|**MesoNet** | 0.054 |0.048 |0.041 |
+Note: ''Merged'' means merging binary and ternary data into one dataset for prediction.
+
+After combining different components, the model not only shows improved prediction accuracy but also demonstrates faster training compared to training the components individually.
+![Model principle](picture/merged.png)
+
+All of the above evidence demonstrates the model's accurate representation of molecular interactions, enabling it to better identify the contributions of different molecules to the mixed system.
+
+
 
 
 ## Code running conditions
@@ -39,6 +55,7 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 |**PLQY** | PLQY.py |PLQY.csv |Three independent runs |2831 |
 |**Two-component  Activity Coefficients** |Activity coefficient (two-component).py |Activity coefficient (two-component)_with_inf.csv |Five-fold cross validation |280000 (with inf),200000(without inf) |
 |**Three-component Activity Coefficients** |Activity coefficient (three-component).py |Activity coefficient (three-component).csv |Five-fold cross validation |160000 |
+|**Activity Coefficients (Merge 2 and 3 components)** |Activity coefficient (merged).py |Activity coefficient (Merged).csv |Five-fold cross validation |360000 |
 
 
 
@@ -51,9 +68,10 @@ The prediction of other properties varies in time from tens of minutes to severa
 
 ## Hyperparameters and model prediction:
 In our training, we did not perform hyperparameter tuning on the validation set for each individual attribute prediction and then make predictions on the test set. In single component, two-component, and three component prediction, we select the same hyperparameters (learning rate, number of neurons, network architecture, etc.) and directly use the training set for training and predicting the test set (validation set).
-In model prediction, error printing is performed directly on the training and testing sets to observe the changes in training and prediction errors. Alternatively, the overall training error and best results can be saved.
-ps： In practical applications, tuning hyperparameters for each property may increase the predictive performance of the model, but we did not do so because the training time was too long and the predictive performance was already better than the models reported in the literature.
 
+In model prediction, error printing is performed directly on the training and testing sets to observe the changes in training and prediction errors. Alternatively, the overall training error and best results can be saved.
+
+ps： In practical applications, tuning hyperparameters for each property may increase the predictive performance of the model, but we did not do so because the training time was too long and the predictive performance was already better than the models reported in the literature.
 
 ## Continuously updated
 We will continue to update data and models in the future. If you have any questions, please contact my email: fanjinming@zju.edu.cn

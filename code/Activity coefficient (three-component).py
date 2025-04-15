@@ -301,8 +301,6 @@ def process_molecule(smiles):
         "nitro": "N(=O)=O",
         "ether": "C-O-C",
         "alkene": "C=C",
-        "Na+_ion": "[Na+1]",       
-        "K+_ion": "[K+1]",      
     }
 
     functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}

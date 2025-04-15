@@ -12,7 +12,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from ncps.torch import CfC,LTC
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 from ncps.wirings import AutoNCP
-triple_csv_path = '/MesoNet/data/output_binary_with_inf_all.csv'
+triple_csv_path = '/MesoNet/data/Activity coefficient (two-component)'
 
 # Class to handle feature encoding of molecules
 class Featurizer:
