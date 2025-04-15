@@ -17,8 +17,9 @@ For more design concepts and details of the model, please refer to Article  **No
   Our model excels in simultaneously modeling the interactions between different components, whether they are binary or ternary mixtures, within a single unified framework. Unlike traditional approaches where components are modeled separately, our model integrates multiple components, enabling accurate predictions across varying mixture compositions. This unified approach allows the model to capture complex intermolecular interactions consistently, across both binary and ternary systems, thereby enhancing its ability to handle compositional diversity and nonlinear interactions effectively.
 
 This cross-component modeling capability is a key strength, as it bridges the compositional gap between binary and ternary mixtures, offering a cohesive solution for complex systems.
-
-## RMSE for activity coefficient prediction.
+Unified Modeling Results Across Different Components
+## Unified Modeling Results Across Different Components
+**RMSE for activity coefficient prediction.**
 |model|two-component |two-component|merged |
 |----------------|--------------------------------|--------------------------------|--------------------------------|
 |SlvGNN | 0.077 |0.072 |unpredictable |
