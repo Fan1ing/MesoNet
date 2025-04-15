@@ -1,20 +1,32 @@
 # MesoNet
 ####  A MesoNet Model for Predicting Physicochemical Property of Complex Systems.
+This work presents a highly interpretable machine learning model designed to elucidate complex intramolecular and intermolecular interactions, particularly in multicomponent mixtures. The model achieves unified predictive modeling for both binary and ternary mixture systems within a single framework, overcoming key challenges in handling compositional diversity and interaction nonlinearity.  
+
+Key features include:  
+1) **Physics-aware architecture** that preserves chemical interpretability while capturing interaction hierarchies  
+2) **Unified representation learning** enabling seamless cross-component generalization  
+3) **Attention mechanisms** that quantify contribution weights of molecular subgroups  
+
+The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction thermodynamics. Its architecture specifically addresses the "compositional gap" between binary and ternary systems through innovative feature embedding.  
+
 For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
 
 # Supporting Information
-## Advantage: Our model is capable of simultaneously modeling the combination of different components, instead of modeling different components separately.
+## Advantage: 
+  Our model excels in simultaneously modeling the interactions between different components, whether they are binary or ternary mixtures, within a single unified framework. Unlike traditional approaches where components are modeled separately, our model integrates multiple components, enabling accurate predictions across varying mixture compositions. This unified approach allows the model to capture complex intermolecular interactions consistently, across both binary and ternary systems, thereby enhancing its ability to handle compositional diversity and nonlinear interactions effectively.
+
+This cross-component modeling capability is a key strength, as it bridges the compositional gap between binary and ternary mixtures, offering a cohesive solution for complex systems.
 
 ## RMSE for activity coefficient prediction.
 |model|two-component |two-component|merged |
 |----------------|--------------------------------|--------------------------------|--------------------------------|
 |SlvGNN | 0.077 |0.072 |unpredictable |
 |NGNN | 0.064 |0.084 |unpredictable |
-|**MesoNet** | **0.054** |**0.048** |**0.041** |
+|**MesoNet** | **0.054** |**0.048** |**0.045** |
 
 **Note**: ''Merged'' means merging binary and ternary data into one dataset for prediction.
 
-After combining different components, the model not only shows improved prediction accuracy but also demonstrates faster training compared to training the components individually.
+The model not only improves prediction accuracy but also accelerates the training process when combining different components, as compared to training them individually. This capability enhances both efficiency and accuracy, making it well-suited for real-world applications where complex mixtures are common. By leveraging a unified modeling framework, the model successfully predicts molecular interactions across different mixture compositions with high precision.
 ![Model principle](picture/merged.png)
 
 All of the above evidence demonstrates the model's accurate representation of molecular interactions, enabling it to better identify the contributions of different molecules to the mixed system.
