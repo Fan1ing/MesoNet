@@ -28,6 +28,7 @@ This cross-component modeling capability is a key strength, as it bridges the co
 **Note**: ''Merged'' means merging binary and ternary data into one dataset for prediction.
 
 The model not only improves prediction accuracy but also accelerates the training process when combining different components, as compared to training them individually. This capability enhances both efficiency and accuracy, making it well-suited for real-world applications where complex mixtures are common. By leveraging a unified modeling framework, the model successfully predicts molecular interactions across different mixture compositions with high precision.
+
 ![Model principle](picture/merged.png)
 
 All of the above evidence demonstrates the model's accurate representation of molecular interactions, enabling it to better identify the contributions of different molecules to the mixed system.
