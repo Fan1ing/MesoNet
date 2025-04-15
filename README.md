@@ -8,7 +8,7 @@ For more design concepts and details of the model, please refer to Article  ***N
 
 Here are the details about the model.
 ![Model principle](picture/Fig2.png)
-##Advantage: Our model is capable of simultaneously modeling the combination of different components, instead of modeling different components separately.
+## Advantage: Our model is capable of simultaneously modeling the combination of different components, instead of modeling different components separately.
 
 ## RMSE for activity coefficient prediction.
 |model|two-component |two-component|merged |
