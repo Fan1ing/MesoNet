@@ -15,7 +15,6 @@ For more design concepts and details of the model, please refer to Article  **No
 # Supporting Information
 **Note: This section includes additional details not discussed in the main text**
 
-Unified Modeling Results Across Different Components
 ## Unified Modeling Results Across Different Components
 **RMSE for activity coefficient prediction.**
 |model|two-component |three-component|merged |
