@@ -12,6 +12,7 @@ The model demonstrates superior performance in predicting mixture properties whi
 For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
 
 # Supporting Information
+**Note: This section includes additional details not discussed in the main text**
 ## Advantage: 
   Our model excels in simultaneously modeling the interactions between different components, whether they are binary or ternary mixtures, within a single unified framework. Unlike traditional approaches where components are modeled separately, our model integrates multiple components, enabling accurate predictions across varying mixture compositions. This unified approach allows the model to capture complex intermolecular interactions consistently, across both binary and ternary systems, thereby enhancing its ability to handle compositional diversity and nonlinear interactions effectively.
 
