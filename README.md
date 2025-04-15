@@ -8,7 +8,8 @@ Key features include:
 3) **cross scale mechanisms** that quantify contribution weights of molecular subgroups  
 
 The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction. 
-We believe that with the accumulation of data, this model may play a greater advantage in unified modeling composed of more properties and more components (>3).
+
+**We believe that with the accumulation of data, this model may play a greater advantage in unified modeling composed of more properties and more components (>3).**
 
 For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
 
