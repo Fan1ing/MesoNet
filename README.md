@@ -83,7 +83,7 @@ In model prediction, error printing is performed directly on the training and te
 ps： In practical applications, tuning hyperparameters for each property may increase the predictive performance of the model, but we did not do so because the training time was too long and the predictive performance was already better than the models reported in the literature.
 
 ## Continuously updated
-We will continue to update data and models in the future，and we will constantly check the correctness and completeness of the code and data. If there are any code running errors or any questions If you have any questions, please contact my email: fanjinming@zju.edu.cn
+We will continue to update data and models in the future，and we will constantly check the correctness and completeness of the code and data. If there are any code running errors or any questions, please contact my email: fanjinming@zju.edu.cn
 
 
 
