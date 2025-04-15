@@ -12,7 +12,7 @@ For more design concepts and details of the model, please refer to Article  ***N
 |NGNN | 0.064 |0.084 |unpredictable |
 |**MesoNet** | **0.054** |**0.048** |**0.041** |
 
-Note: ''Merged'' means merging binary and ternary data into one dataset for prediction.
+**Note**: ''Merged'' means merging binary and ternary data into one dataset for prediction.
 
 After combining different components, the model not only shows improved prediction accuracy but also demonstrates faster training compared to training the components individually.
 ![Model principle](picture/merged.png)
