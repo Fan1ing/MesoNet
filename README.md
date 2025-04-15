@@ -8,8 +8,8 @@ For more design concepts and details of the model, please refer to Article  ***N
 ## RMSE for activity coefficient prediction.
 |model|two-component |two-component|merged |
 |----------------|--------------------------------|--------------------------------|--------------------------------|
-|**SlvGNN** | 0.077 |0.072 |unpredictable |
-|**NGNN** | 0.064 |0.084 |unpredictable |
+|SlvGNN | 0.077 |0.072 |unpredictable |
+|NGNN | 0.064 |0.084 |unpredictable |
 |**MesoNet** | **0.054** |**0.048** |**0.041** |
 
 Note: ''Merged'' means merging binary and ternary data into one dataset for prediction.
