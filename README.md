@@ -1,6 +1,6 @@
 # MesoNet
 ####  A MesoNet Model for Predicting Physicochemical Property of Complex Systems.
-For more design concepts and details of the model, please refer to Article  ***Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay ***
+For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay **
 
 # Supporting Information
 ## Advantage: Our model is capable of simultaneously modeling the combination of different components, instead of modeling different components separately.
