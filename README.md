@@ -5,18 +5,16 @@ This work presents a highly interpretable machine learning model designed to elu
 Key features include:  
 1) **Physics-aware architecture** that preserves chemical interpretability while capturing interaction hierarchies  
 2) **Unified representation learning** enabling seamless cross-component generalization  
-3) **Attention mechanisms** that quantify contribution weights of molecular subgroups  
+3) **cross scale mechanisms** that quantify contribution weights of molecular subgroups  
 
-The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction. Its architecture specifically addresses the "compositional gap" between binary and ternary systems through innovative feature embedding.  
+The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction. 
+We believe that with the accumulation of data, this model may play a greater advantage in unified modeling composed of more properties and more components (>3).
 
 For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
 
 # Supporting Information
 **Note: This section includes additional details not discussed in the main text**
-## Advantage: 
-  Our model excels in simultaneously modeling the interactions between different components, whether they are binary or ternary mixtures, within a single unified framework. Unlike traditional approaches where components are modeled separately, our model integrates multiple components, enabling accurate predictions across varying mixture compositions. This unified approach allows the model to capture complex intermolecular interactions consistently, across both binary and ternary systems, thereby enhancing its ability to handle compositional diversity and nonlinear interactions effectively.
 
-This cross-component modeling capability is a key strength, as it bridges the compositional gap between binary and ternary mixtures, offering a cohesive solution for complex systems.
 Unified Modeling Results Across Different Components
 ## Unified Modeling Results Across Different Components
 **RMSE for activity coefficient prediction.**
