@@ -24,7 +24,7 @@ For more design concepts and details of the model, please refer to Article  **No
 |NGNN | 0.064 |0.084 |unpredictable |
 |**MesoNet** | **0.054** |**0.048** |**0.045** |
 
-**Note**: ''Merged'' means merging binary and ternary data into one dataset for prediction.
+**Note**: ''Merged'' means merging two-component and three-component data into one dataset for prediction.
 
 **Extrapolation results for unseen concentrations**
 |0.5：0.5|MAE |RMSE|0.33：0.33：0.33|MAE |RMSE|
@@ -32,7 +32,7 @@ For more design concepts and details of the model, please refer to Article  **No
 |two-component | 0.041 |0.071 |three-component | 0.052 |0.114 |
 |**merged** | **0.020** |**0.035** |**merged** | **0.032** |**0.062** |
 
-**Note**: The table shows the extrapolation performance of unseen concentration ratios when modeling separately with binary and ternary datasets and when modeling with merged datasets.
+**Note**: The table shows the extrapolation performance of unseen concentration ratios when modeling separately with two-component and three-component datasets and when modeling with merged datasets.
 
 The model not only improves prediction accuracy but also accelerates the training process when combining different components, as compared to training them individually. This capability enhances both efficiency and accuracy, making it well-suited for real-world applications where complex mixtures are common. By leveraging a unified modeling framework, the model successfully predicts molecular interactions across different mixture compositions with high precision.
 
