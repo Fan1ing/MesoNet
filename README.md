@@ -30,7 +30,7 @@ For more design concepts and details of the model, please refer to Article  **No
 |0.5：0.5|MAE |RMSE|0.33：0.33：0.33|MAE |RMSE|
 |----------------|--------------------------------|--------------------------------|----------------|--------------------------------|--------------------------------|
 |two-component | 0.041 |0.071 |three-component | 0.052 |0.114 |
-|**merged** | **0.020** |**0.035** |**merged** | **0.032** |**0.062** |
+|**merged** | **0.019** |**0.035** |**merged** | **0.032** |**0.062** |
 
 **Note**: The table shows the extrapolation performance of unseen concentration ratios when modeling separately with two-component and three-component datasets and when modeling with merged datasets.
 
