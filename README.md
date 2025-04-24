@@ -20,7 +20,7 @@ For more design concepts and details of the model, please refer to Article  **No
 **RMSE for activity coefficient prediction.**
 |model|two-component |three-component|merged |
 |----------------|--------------------------------|--------------------------------|--------------------------------|
-|SlvGNN | 0.077 |0.072 |unpredictable |
+|SolvGNN | 0.077 |0.072 |unpredictable |
 |NGNN | 0.064 |0.084 |unpredictable |
 |**MesoNet** | **0.054** |**0.048** |**0.045** |
 
