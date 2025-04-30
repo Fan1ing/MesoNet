@@ -480,7 +480,7 @@ class MesoNet(nn.Module):
             nn.Linear(edge_hidden_dim, 41 * 32)
         ), aggr="mean")
 
-        self.CfC = CfC(6,AutoNCP(12,6), batch_first=True)
+        self.NCP = CfC(6,AutoNCP(12,6), batch_first=True)
         self.x11 = nn.Linear(41,32)
 
         self.hidden = nn.Linear(6,12)
@@ -570,7 +570,7 @@ class MesoNet(nn.Module):
 
 
         for _ in range(5):
-            output, hidden_state = self.CfC(x2_input,hidden_state)
+            output, hidden_state = self.NCP(x2_input,hidden_state)
             predicted_steps.append(output.view(output.size(0), -1))
 
         x2_output = torch.cat(predicted_steps, dim=-1)
