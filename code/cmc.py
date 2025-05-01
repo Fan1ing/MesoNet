@@ -422,7 +422,7 @@ class MesoNet(nn.Module):
             nn.Linear(edge_hidden_dim, 32 * 32)
         ), aggr="mean")
 
-        self.last = nn.Linear(128,64)
+        self.last = nn.Linear(128,128)
         self.xm = nn.Linear(64, 64)
 
         self.relu = nn.ReLU()
