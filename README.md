@@ -11,7 +11,7 @@ The model demonstrates superior performance in predicting mixture properties whi
 
 **We believe that with the accumulation of data, this model may play a greater advantage in unified modeling composed of more properties and more components (>3).**
 
-For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
+For more design concepts and details of the model, please refer to Article  **A MesoNet Model for Predicting Physicochemical Property of Complex Systems.**
 
 # Supporting Information
 **Note: This section includes additional details not discussed in the main text**
