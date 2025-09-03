@@ -1,5 +1,5 @@
 # MesoNet
-####  A MesoNet Model for Predicting Physicochemical Property of Complex Systems.
+####  MesoNet: A Fundamental Principle for Multi-Representation  Learning in Complex Chemical Systems
 This work presents a highly interpretable machine learning model designed to elucidate complex intramolecular and intermolecular interactions, particularly in multicomponent mixtures. The model achieves unified predictive modeling for both binary and ternary mixture systems within a single framework, overcoming key challenges in handling compositional diversity and interaction nonlinearity.  
 
 Key features include:  
@@ -8,39 +8,6 @@ Key features include:
 3) **cross scale mechanisms** that quantify contribution weights of molecular subgroups  
 
 The model demonstrates superior performance in predicting mixture properties while maintaining transparency - offering both accurate predictions and mechanistic insights into interaction. 
-
-**We believe that with the accumulation of data, this model may play a greater advantage in unified modeling composed of more properties and more components (>3).**
-
-For more design concepts and details of the model, please refer to Article  **Non-Random Parameterized Networks for Cross-Scale Modeling of Compositional Interplay**
-
-# Supporting Information
-**Note: This section includes additional details not discussed in the main text**
-
-## Unified Modeling Results Across Different Components
-**RMSE for activity coefficient prediction.**
-|model|two-component |three-component|merged |
-|----------------|--------------------------------|--------------------------------|--------------------------------|
-|SolvGNN | 0.077 |0.072 |unpredictable |
-|NGNN | 0.064 |0.084 |unpredictable |
-|**MesoNet** | **0.054** |**0.048** |**0.045** |
-
-**Note**: ''Merged'' means merging two-component and three-component data into one dataset for prediction.
-
-**Extrapolation results for unseen concentrations**
-|0.5：0.5|MAE |RMSE|0.33：0.33：0.33|MAE |RMSE|
-|----------------|--------------------------------|--------------------------------|----------------|--------------------------------|--------------------------------|
-|two-component | 0.041 |0.071 |three-component | 0.052 |0.114 |
-|**merged** | **0.019** |**0.035** |**merged** | **0.032** |**0.062** |
-
-**Note**: The table shows the extrapolation performance of unseen concentration ratios when modeling separately with two-component and three-component datasets and when modeling with merged datasets.
-
-The model not only improves prediction accuracy but also accelerates the training process when combining different components, as compared to training them individually. This capability enhances both efficiency and accuracy, making it well-suited for real-world applications where complex mixtures are common. By leveraging a unified modeling framework, the model successfully predicts molecular interactions across different mixture compositions with high precision.
-
-![Model principle](picture/merged.png)
-
-All of the above evidence demonstrates the model's accurate representation of molecular interactions, enabling it to better identify the contributions of different molecules to the mixed system.
-
-
 
 
 ## Code running conditions
@@ -58,22 +25,6 @@ If you wish to use your own dataset for prediction, simply prepare the required 
 ## The following table shows an example of processing the activity coefficients of three components
 |solv1_x|solv2_x|solv3_x|solv1_gamma|solv2_gamma|solv3_gamma|solv1_smiles|solv2_smiles|solv3_smiles|
 |----------------|----------|----------|----------|----------|----------|----------|----------|----------|
-
-
-## The following table shows the code and data files for different predicted properties
-|properties |code name|dataset name |note |dataset size |
-|----------------|--------------------------------|--------------------------------|--------------------------------|--------------------------------|
-|**Solubility** | Solubility.py |Solubility.csv |A random run |8438 |
-|**CMC** | cmc.py |cmc.csv |Specific dataset partitioning |1395 |
-|**Lipophilicity** | lipophilicity.py |lipophilicity.csv |Three independent runs |4200 |
-|**Ionization Energy (IE)** | IE.py |IE.csv |Three independent runs|2147 |
-|**absorption wavelength** | ABS.py |aboso.csv |Three independent runs |3943 |
-|**emission wavelength** | EM.py |EM.csv |Three independent runs |4038 |
-|**PLQY** | PLQY.py |PLQY.csv |Three independent runs |2831 |
-|**Two-component  Activity Coefficients** |Activity coefficient (two-component).py |Activity coefficient (two-component)_with_inf.csv |Five-fold cross validation |280000 (with inf),200000(without inf) |
-|**Three-component Activity Coefficients** |Activity coefficient (three-component).py |Activity coefficient (three-component).csv |Five-fold cross validation |160000 |
-|**Activity Coefficients (Merge 2 and 3 components)** |Activity coefficient (merged).py |Activity coefficient (Merged).csv |Five-fold cross validation |360000 |
-
 
 
 ## Running time
