@@ -858,10 +858,9 @@ best_val_loss = float('inf')
 best_val_mae = float('inf')
 best_val_mre = float('inf')
 best_val_r2 = float('inf')
+best_testmae = float('inf')
 
 best_val_rmse    = float('inf')
-best_model_state = None
-best_epoch       = 0
 
 for epoch in range(1, epochs+1):
     # ——— 1. 训练 ———
@@ -928,9 +927,9 @@ for epoch in range(1, epochs+1):
     test_mre     = mean_relative_error(np.array(y_test_true), np.array(y_test_pred))
     test_r2      = r2_score(y_test_true, y_test_pred)
 
-    if val_mae < best_val_rmse:
-        best_val_rmse    = val_mae
-        best_epoch       = test_mae
+    if val_mae < best_val_mae:
+        best_val_mae    = val_mae
+        best_testmae       = test_mae
 
         best_model_state = model.state_dict()
 
@@ -943,7 +942,7 @@ for epoch in range(1, epochs+1):
 
 # —— 训练结束，打印最优模型信息并保存 ——
 print("\n=== Best Model Summary ===")
-print(f"  Best Epoch: {best_epoch}, Valid RMSE: {best_val_rmse:.4f}")
+print(f"  best test mae: {best_testmae}, Valid RMSE: {best_val_mae:.4f}")
 torch.save(best_model_state, 'best_model.pth')
 
 import matplotlib.pyplot as plt
