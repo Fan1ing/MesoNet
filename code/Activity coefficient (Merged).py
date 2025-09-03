@@ -15,7 +15,7 @@ from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDec
 import math
 import torch.nn.functional as F
 
-triple_csv_path = '/home/ubuntu/Activity coefficient (Merged).csv'
+triple_csv_path = '/MesoNet/data/Activity coefficient (Merged).csv'
 
 class Featurizer:
     def __init__(self, allowable_sets):

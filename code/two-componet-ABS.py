@@ -23,7 +23,7 @@ import torch.nn.functional as F
 #Change to local address
 # The absorption wavelength and emission wavelength use the same code, only the dataset is different.
 
-csv_path = '/home/ubuntu/aboso.csv'
+csv_path = '/MesoNet/data/aboso.csv'
 
 df = pd.read_csv(csv_path)
 

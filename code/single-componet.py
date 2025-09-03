@@ -16,8 +16,8 @@ from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error,me
 from rdkit.Chem import rdMolDescriptors,Crippen
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 import math
-#csv_path = '/MesoNet/data/Lipophilicity.csv'
-csv_path = '/home/ubuntu/Lipophilicity.csv'
+csv_path = '/MesoNet/data/Lipophilicity.csv'
+#csv_path = '/home/ubuntu/Lipophilicity.csv'
 #csv_path = "C:/Users/Ahan/Desktop/data/Lipophilicity.csv"
 
 df = pd.read_csv(csv_path)
