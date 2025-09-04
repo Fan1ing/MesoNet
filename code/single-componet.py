@@ -509,7 +509,7 @@ class MesoNet(nn.Module):
         self.decoder_layer = TransformerDecoderLayer(d_model=32, nhead=4, dim_feedforward=64, dropout=0.2)
         self.transformer_decoder = TransformerDecoder(self.decoder_layer, num_layers=2)
         self.lstm_a2_1 = CfC(6, AutoNCP(12, 6), batch_first=True)
-        self.x22 = nn.Linear(6, 32)  # 5-step * feature 6 -> 32
+        self.x22 = nn.Linear(30, 32)  # 5-step * feature 6 -> 32
         self.a21 = NNConv(32, 32, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim), nn.ReLU(), nn.Dropout(0),
             nn.Linear(edge_hidden_dim, 32 * 32)
@@ -537,9 +537,9 @@ class MesoNet(nn.Module):
         self.attn_global_group = FeatureCrossAttention(dim_in_q=19, dim_in_kv=32, model_dim=32, num_heads=1)
         self.inter = FeatureCrossAttention(dim_in_q=19, dim_in_kv=19, model_dim=32, num_heads=1)
         self.xm3 = nn.Linear(288, 288)  # fuse 3 parts
-        self.sub1 = NNConv(32 , hidden_dim, nn.Sequential(
+        self.sub1 = NNConv(hidden_dim , hidden_dim, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim), nn.ReLU(), nn.Dropout(0.2),
-            nn.Linear(edge_hidden_dim, 32 * hidden_dim)
+            nn.Linear(edge_hidden_dim, hidden_dim * hidden_dim)
         ), aggr='mean')
         self.sub2 = NNConv(hidden_dim, hidden_dim, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim), nn.ReLU(), nn.Dropout(0.2),
