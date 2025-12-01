@@ -36,31 +36,24 @@ class MixData(Data):
         return self.x.size(0) if hasattr(self, "x") and self.x is not None else super().num_nodes
 
     def __inc__(self, key, value, *args, **kwargs):
-        # PyG 会用它来决定 batch 拼接时每样本的“增量”
         if key == 'edge_index':
-            # 原子图索引：按原子数递增（PyG 默认就是这样）
             return self.num_nodes
 
         if key == 'edge_index_group':
-            # 基团-基团图：行/列都按该样本的 group 数递增
             G = self.x_group.size(0) if hasattr(self, 'x_group') and self.x_group is not None else 0
             return torch.tensor([[G], [G]], dtype=torch.long)
 
         if key == 'atom2group_index':
-            # 二部图：(row=group, col=atom)
             G = self.x_group.size(0) if hasattr(self, 'x_group') and self.x_group is not None else 0
             N = self.num_nodes
             return torch.tensor([[G], [N]], dtype=torch.long)
 
         if key == 'global_edge_index':
-            # 分子层 4 节点图：每样本 +4
             return torch.tensor([[4], [4]], dtype=torch.long)
 
-        # 其他字段不需要增量（特征/掩码等）
         return 0
 
     def __cat_dim__(self, key, value, *args, **kwargs):
-        # 索引形 [2, E] 的沿 dim=1 拼接；其它默认 dim=0
         if key in ['edge_index', 'edge_index_group', 'atom2group_index', 'global_edge_index']:
             return 1
         return 0
@@ -338,30 +331,24 @@ def process_molecule_hg(smiles):
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
     edge_attr  = torch.tensor(edge_features, dtype=torch.float32)
 
-    # ------- 你的基团 SMARTS 定义（原样保留）-------
     functional_groups_smarts = {
-        # ===== 疏水链 =====
-        "long_alkyl_chain": "C",  # 长烷基链（C6及以上）
+        "long_alkyl_chain": "C",
 
-        "hydroxyl": "[OX2H]",  # 羟基（末端OH）
-        "ether": "C-O-C",  # 一般醚，包括PEG段
-        "ester": "C(=O)O",  # 酯键或酰氧键
-        "carbonyl": "C=O",  # 羰基（通用C=O）
-        "carboxylate": "C(=O)[O-]",  # 羧酸盐/羧酸根
-        "sulfate_ester": "[OX2][SX4](=O)(=O)[O-]",  # 硫酸酯（R–O–SO3–）
-        "sulfonate": "[SX4](=O)(=O)[O-]",  # 磺酸盐（R–SO3–）
+        "hydroxyl": "[OX2H]",
+        "ether": "C-O-C",
+        "ester": "C(=O)O",
+        "carbonyl": "C=O",
+        "carboxylate": "C(=O)[O-]",
+        "sulfate_ester": "[OX2][SX4](=O)(=O)[O-]",
+        "sulfonate": "[SX4](=O)(=O)[O-]",
 
-        # ===== 含氮阳离子 =====
-        "quaternary_ammonium": "[NX4+]",  # 季铵盐（R4N+）
-        "zwitterion_ammonium_carboxylate": "[NX4+].C(=O)[O-]",  # 两性型季铵-羧酸
+        "quaternary_ammonium": "[NX4+]",
+        "zwitterion_ammonium_carboxylate": "[NX4+].C(=O)[O-]",
 
-        # ===== 芳香族 =====
-        "phenyl": "c1ccccc1",  # 苯环（含苄基结构）
+        "phenyl": "c1ccccc1",
 
-        # ===== 不饱和键 =====
-        "alkene": "C=C",  # 烯键（如烯基链）
+        "alkene": "C=C",
 
-        # ===== 离子 =====
         "Na+_ion": "[Na+]",
         "K+_ion": "[K+]",
         "Cl-_ion": "[Cl-]",
@@ -374,7 +361,6 @@ def process_molecule_hg(smiles):
     group_names = list(patt_dict.keys())
     N = node_features.size(0)
 
-    # -------（保留你原先的原子×基团类型 one-hot）-------
     group_membership = torch.zeros((N, len(group_names)), dtype=torch.float32)
     for g_idx, name in enumerate(group_names):
         patt = patt_dict[name]
@@ -386,9 +372,8 @@ def process_molecule_hg(smiles):
                 group_membership[atom_idx, g_idx] = 1.0
     node_features = torch.cat((node_features, group_membership), dim=1)
 
-    # ------- 基团“实例”节点（超图的关键）：每次匹配 = 一个基团节点 -------
-    group_nodes = []               # [(name, [atom_ids]), ...]
-    group_type_oh = []             # 每个实例的类型 one-hot
+    group_nodes = []
+    group_type_oh = []
     for name, patt in patt_dict.items():
         if patt is None:
             continue
@@ -417,7 +402,6 @@ def process_molecule_hg(smiles):
     else:
         x_group = torch.empty(0, len(group_names) + node_features.size(1))
 
-    # 原子–基团 二部边（超图关联）
     gi, ai = [], []
     for gid, (_n, members) in enumerate(group_nodes):
         for a in members:
@@ -459,7 +443,6 @@ def process_molecule_hg(smiles):
     global_features1 = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
     global_features  = torch.cat((global_features1, global_features2), dim=1)
 
-    # 原子拼接全局（保留你的做法）
     global_features_repeated = global_features.repeat(N, 1)
     node_features = torch.cat([node_features, global_features_repeated], dim=1)
 
@@ -469,12 +452,10 @@ def process_molecule_hg(smiles):
         atom2group_index=atom2group_index,
         global_features=global_features
     )
-# ========= 2 组分 + 单标签 =========
 def combine_molecules_hg_2(smiles1, smiles2, x1=None, x2=None,C=None):
     g1 = process_molecule_hg(smiles1)
     g2 = process_molecule_hg(smiles2)
 
-    # --- 浓度拼到原子特征（每原子追加 1 维浓度标量）---
     x1 = torch.tensor([x1,C], dtype=torch.float32)
     x2 = torch.tensor([x2,C], dtype=torch.float32)
 
@@ -484,7 +465,6 @@ def combine_molecules_hg_2(smiles1, smiles2, x1=None, x2=None,C=None):
 
     g1x, g2x = add_conc(g1.x, x1), add_conc(g2.x, x2)
 
-    # --- 原子层 offset & 拼接 ---
     off_a1 = 0
     off_a2 = off_a1 + g1x.size(0)
     combined_x = torch.cat([g1x, g2x], dim=0)
@@ -593,8 +573,7 @@ def load_data_two(csv_path):
     smiles1 = [str(s).strip() if pd.notnull(s) else '' for s in df['solv1_smiles']]
     smiles2 = [str(s).strip() if pd.notnull(s) else '' for s in df['solv2_smiles']]
 
-    # 单一标签 y（比如表面张力、或你 CSV 里的那一列）
-    y = df['surface_tension'].tolist()   # 把列名改成你的真实标签列名
+    y = df['surface_tension'].tolist()
 
     x1 = df['solv1_x'].tolist()
     x2 = df['solv2_x'].tolist()
@@ -618,7 +597,7 @@ class MoleculesDatasetTwo(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['CMC.csv']  # 按你的文件名改
+        return ['CMC.csv']
 
     @property
     def processed_file_names(self):
@@ -638,7 +617,6 @@ class MoleculesDatasetTwo(InMemoryDataset):
             except ValueError as e:
                 print(f"[跳过样本#{i}] SMILES 错误: {e}")
                 continue
-            # 单标签：保存为形状 [1] 的 float32
             y = float(self.targets[i])
             data.y = torch.tensor(y, dtype=torch.float32)
             datas.append(data)
@@ -647,14 +625,12 @@ class MoleculesDatasetTwo(InMemoryDataset):
 
 
 
-# 使用示例
-# 这里假设你的CSV路径是 `triple_csv_path`
 
 smiles1, smiles2, targets, concentrations = load_data_two(triple_csv_path)
 dataset = MoleculesDatasetTwo(root='CMC', smiles1=smiles1, smiles2=smiles2,
                               targets=targets, concentrations=concentrations)
 
-print(len(dataset))  # 查看数据集的长度
+print(len(dataset))
 
 class FeatureCrossAttention(nn.Module):
     def __init__(self, dim_in_q, dim_in_kv, model_dim, num_heads, dropout=0):
@@ -663,15 +639,12 @@ class FeatureCrossAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = 32
 
-        # 首先把原特征维度映射到 model_dim
         self.q_map = nn.Linear(dim_in_q, 128)
         self.k_map = nn.Linear(dim_in_kv, 128)
         self.v_map = nn.Linear(dim_in_kv, 128)
 
-        # Attention 后再投回 model_dim
         self.out_map = nn.Linear(128, model_dim)
         self.Qout = nn.Linear(128, model_dim)
-        # 输出再映射回原dim_in_q
         self.norm = nn.LayerNorm(model_dim)
 
         self.dropout = nn.Dropout(dropout)
@@ -696,7 +669,6 @@ class FeatureCrossAttention(nn.Module):
         Kh = Km.view(B, L_kv, self.num_heads, self.d_k).permute(0, 2, 3, 1) # (B, H, d_k, L_kv)
         Vh = Vm.view(B, L_kv, self.num_heads, self.d_k).permute(0, 2, 3, 1) # (B, H, d_k, L_kv)
 
-        # ========== 3) 现在交换特征维 & token维 ==========
         # 现在注意力是在“特征之间”计算
         # 这里 d_k 视为 sequence-like 维度，而 L_q/L_kv 是特征通道的上下文
         scores = torch.matmul(Qh, Kh.transpose(-2, -1)) * self.scale  # (B, H, d_k, d_k)
@@ -847,19 +819,15 @@ class AtomGroupBridgeFiLM(nn.Module):
         x_group = x_group[:, 0:16]
         X_group = x_group
         if Gm == 0 or atom_idx.numel() == 0 or group_idx.numel() == 0:
-            # 保证返回的 xg 形状是 [0, Dg]
             xg_empty = x_atom.new_zeros((0, Dg))
             return x_atom, xg_empty
         x_group = self.g_proj(x_group)
         xa_proj = self.a_proj_to_g(x_atom)  # [Na, Dg]
-        # 取归属边上的原子表示，形成“实例-包”的 items
         xa_items = xa_proj.index_select(0, atom_idx)  # [N_inc, Dg]
-        # 用 group_idx 作为 batch，把每个基团的原子集合打包
         xg_a2g = set2set_pool(xa_items, group_idx, size=Gm, s2s=self.s2s_a2g)
 
         xg = torch.cat((x_group,xg_a2g),dim=1)
 
-        # [Gm, 2*Dg]
         xg = self.merge_a2g(xg)  # [Gm, Dg]# [Gm, 2*Dg]
         #xg_from_atom = self.merge_a2g(xg_a2g)  # [Gm, Dg]
 
@@ -871,16 +839,16 @@ class AtomGroupBridgeFiLM(nn.Module):
         if Gm > 0:
             gamma = self.film_gamma(cond_g)                        # [Gm, Dg]
             beta  = self.film_beta(cond_g)                         # [Gm, Dg]
-            xg    = gamma * xg  + beta   # [Gm, Dg]
+            xg    = gamma * xg  + beta
         else:
-            xg    = xg_from_atom  # [0, Dg] 安全路径
+            xg    = xg_from_atom
         # 4) 基团图
         '''if Gm > 0 and (edge_index_group is not None) and (edge_index_group.numel() > 0):
             xg = self.group_gcn2(xg, edge_index_group)'''
         xg = torch.cat((xg, cond_g), dim=1)
 
         #xg_items = xg.index_select(0, group_idx)  # [N_inc, Dg]
-        # 用 atom_idx 作为 batch，把每个原子的基团集合打包
+
         '''xa_g2a = groups_to_atoms_local(xg, group_idx, atom_idx, Na, reduce='mean')  # [Na, 2*Dg]
         xa_from_group = self.g_proj_to_a(xa_g2a)'''
         xa_out = x_atom
@@ -1115,7 +1083,8 @@ class MesoNet(nn.Module):
         ), aggr="mean")
 
         self.G = nn.Linear(21, 32)
-        self.lstm = CfC(6, AutoNCP(12,6), batch_first=True)
+        self.NCP1 = CfC(32, AutoNCP(68,32), batch_first=True)
+
         self.NCP2= CfC(164, AutoNCP(320,160), batch_first=True)
         self.x22 = nn.Linear(96,96)
         self.x2 = nn.Linear(6,32)
@@ -1164,7 +1133,6 @@ class MesoNet(nn.Module):
             nn.Linear(128, 1)
         )
 
-        self.lstm_a2_1 = CfC(32, AutoNCP(68,32), batch_first=True)
         self.NCP= CfC(164, AutoNCP(320,160), batch_first=True)
 
         # FiLM 参数
@@ -1276,7 +1244,7 @@ class MesoNet(nn.Module):
         x2_input = x2_output.unsqueeze(1)
         predicted_steps, hidden_state = [], torch.cat((group_updated, global_updated, C), dim=1)
         for _ in range(3):
-            output, hidden_state = self.lstm_a2_1(x2_input, hidden_state)
+            output, hidden_state = self.NCP1(x2_input, hidden_state)
             x2_input = output
             predicted_steps.append(output.view(output.size(0), -1))
         x2_output = torch.cat(predicted_steps, dim=-1)

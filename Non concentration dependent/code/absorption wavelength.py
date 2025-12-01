@@ -1112,7 +1112,7 @@ class MesoNet(nn.Module):
         ), aggr="mean")
 
         self.G = nn.Linear(21, 32)
-        self.lstm_a2_1 = CfC(32, AutoNCP(64, 32), batch_first=True)
+        self.NCP1 = CfC(32, AutoNCP(64, 32), batch_first=True)
         self.x22 = nn.Linear(96,96)
         self.x2 = nn.Linear(6,32)
         self.a21 = NNConv(96, 96, nn.Sequential(
@@ -1288,7 +1288,7 @@ class MesoNet(nn.Module):
         hidden_state =torch.cat((global_updated,group_updated),dim=1)
 
         for _ in range(3):
-            output, hidden_state = self.lstm_a2_1(x2_input,hidden_state)
+            output, hidden_state = self.NCP1(x2_input,hidden_state)
             x2_input = output
             predicted_steps.append(output.view(output.size(0), -1))
 

@@ -1189,8 +1189,8 @@ class MesoNet(nn.Module):
         ), aggr="mean")
 
         self.G = nn.Linear(21, 32)
-        self.lstm = CfC(6, AutoNCP(12,6), batch_first=True)
-        self.lstm_a2_1 = CfC(32, AutoNCP(66,32), batch_first=True)
+        self.NCP1 = CfC(32, AutoNCP(67,32), batch_first=True)
+
         self.NCP2= CfC(163, AutoNCP(320,160), batch_first=True)
         self.x22 = nn.Linear(96,96)
         self.x2 = nn.Linear(6,32)
@@ -1237,8 +1237,6 @@ class MesoNet(nn.Module):
             nn.Linear(128, 1)
         )
 
-        self.lstm_a2_1 = CfC(32, AutoNCP(67,32), batch_first=True)
-        self.NCP= CfC(162, AutoNCP(320,160), batch_first=True)
 
         # FiLM 参数
         self.c1_gamma = nn.Sequential(nn.Linear(3, 160), nn.ReLU(), nn.Linear(160, 160))
@@ -1255,13 +1253,11 @@ class MesoNet(nn.Module):
         self.hidden= nn.Linear(163,323)
 
         self.group2group = nn.Linear(hidden_dim,32)
-        # ======= 新增：Atom<->Group 桥（无边特征） =======
 
         self.atom_group_bridge = AtomGroupBridgeFiLM(
             atom_dim=hidden_dim, group_dim=hidden_dim,cond_dim = 3, s2s_steps=2
         )
 
-        #self.group_pooler = GroupPoolSet2Set(in_dim=hidden_dim+20, processing_steps=2)
 
     @staticmethod
     def _slice_group_view(data, mol_id, atom_mask):
@@ -1336,7 +1332,6 @@ class MesoNet(nn.Module):
 
         x2_output = self.x2(x2)
         x2_output = self.relu(x2_output)
-        # =======（保持）你的注意力交互 =======
         inter, _ = self.inter(g.unsqueeze(1), G_.unsqueeze(1))
         inter = inter.squeeze(1)
 
@@ -1349,7 +1344,7 @@ class MesoNet(nn.Module):
         x2_input = x2_output.unsqueeze(1)
         predicted_steps, hidden_state = [], torch.cat((group_updated, global_updated, C), dim=1)
         for _ in range(3):
-            output, hidden_state = self.lstm_a2_1(x2_input, hidden_state)
+            output, hidden_state = self.NCP1(x2_input, hidden_state)
             x2_input = output
             predicted_steps.append(output.view(output.size(0), -1))
         x2_output = torch.cat(predicted_steps, dim=-1)
@@ -1370,7 +1365,6 @@ class MesoNet(nn.Module):
             edge_attr_group=None
             # <--- 新增
         )
-        # ======= 插入：Atom<->Group 超图交互（无边特征）=======
 
         edge_attr_group =None
 
@@ -1404,7 +1398,7 @@ class MesoNet(nn.Module):
         subgraph_x3,_ = self.NCP2(subgraph_x3, hidden)
         subgraph_x3 = subgraph_x3.squeeze(1)
 
-        # readout（保持）
+        # readout
         subgraph_x = self.set2set(subgraph_x3, batch[mask])
         group = global_mean_pool(inter, batch[mask])
         '''group_pool = self.group_pooler(
