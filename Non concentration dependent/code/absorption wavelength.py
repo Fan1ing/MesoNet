@@ -1499,7 +1499,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 threshold = 400
 dataset_size = len(dataset)
 kf = KFold(n_splits=k_folds, shuffle=True, random_state=0)
-start_fold = 2
+start_fold = 0
 best_val_losses, best_val_maes, best_val_mses, best_val_r2s = [], [], [], []
 test_rmse_list, test_mae_list, test_mse_list, test_r2_list = [], [], [], []
 
