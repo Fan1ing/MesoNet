@@ -1577,13 +1577,13 @@ class MesoNet(nn.Module):
 
 from sklearn.model_selection import KFold,StratifiedKFold
 import torch
-from torch_geometric.loader import DataLoader  # Change to PyG DataLoader
+from torch_geometric.loader import DataLoader
 from torch.utils.data import Subset
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
 from sklearn.model_selection import KFold, train_test_split
 
-epochs = 250
+epochs = 350
 k_folds = 5
 batch_size =256
 input_dim = atom_featurizer.dim
@@ -1605,7 +1605,6 @@ for fold, (train_idx, valtest_idx) in enumerate(kf.split(dataset)):
 
     print(f"Start Fold {fold+1}/{k_folds}")
 
-    # 验证集 / 测试集 0.5:0.5 划分
     val_idx, test_idx = train_test_split(
         valtest_idx, test_size=0.5, random_state=42, shuffle=True
     )
@@ -1673,7 +1672,6 @@ for fold, (train_idx, valtest_idx) in enumerate(kf.split(dataset)):
         val_mae = mean_absolute_error(y_val_true, y_val_pred)
         val_r2 = r2_score(y_val_true, y_val_pred)
 
-        # 记录最优验证结果
         y_test_true, y_test_pred = [], []
         with torch.no_grad():
             for batch in test_loader:
@@ -1699,7 +1697,6 @@ for fold, (train_idx, valtest_idx) in enumerate(kf.split(dataset)):
         print(f"Epoch {epoch+1}/{epochs}")
         print(f"  Train RMSE: {train_rmse:.4f}, MAE: {train_mae:.4f}, R²: {train_r2:.4f}")
         print(f"  Val   RMSE: {val_rmse:.4f}, MAE: {val_mae:.4f}, R²: {val_r2:.4f}")
-        #print(f"  Test  RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}, R²: {test_r2:.4f}")
 
 
 

@@ -1315,12 +1315,11 @@ class MesoNet(nn.Module):
         global_node_attr = data.global_node_attr.to(device)
         global_edge_attr = global_edge_attrall[:, 0:4]
 
-        # 四个分子分别跑
         s1, xg_after1, group_batch1, grp1,_,_,_,xg_type1 = self.process_subgraph(data, data.mask1, mol_id=0)
         s2, xg_after2, group_batch2, grp2,_,_ ,_,xg_type2= self.process_subgraph(data, data.mask2, mol_id=1)
 
-        xg_list = [xg_after1, xg_after2]  # [Gi, H]
-        gb_list = [group_batch1, group_batch2]  # [Gi]
+        xg_list = [xg_after1, xg_after2]
+        gb_list = [group_batch1, group_batch2]
 
         per_mol_cross,mix_feat, attn_w1, attn_w2,lens= self.cross_group_attn(xg_list, gb_list)
 
