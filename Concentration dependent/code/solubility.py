@@ -156,20 +156,17 @@ def process_molecule_hg(smiles):
     if mol is None:
         raise ValueError(f"Invalid SMILES string: {smiles}")
 
-    # ------- 你的全局分子特征 -------
     mol = Chem.AddHs(mol)
     num_donors    = rdMolDescriptors.CalcNumHBD(mol)
     num_acceptors = rdMolDescriptors.CalcNumHBA(mol)
     logp          = Crippen.MolLogP(mol)
     tpsa          = rdMolDescriptors.CalcTPSA(mol)
 
-    # ------- 你的原子特征 -------
     node_features = []
     for atom in mol.GetAtoms():
         node_features.append(atom_featurizer.encode(atom))
     node_features = torch.tensor(node_features, dtype=torch.float32)  # [Na, Da0]
 
-    # 附加元素物性（你原逻辑原样保留）
     rows, _ = node_features.shape
     zeros_tensor = torch.zeros(rows, 6)
     node_features = torch.cat((node_features, zeros_tensor), dim=1)
@@ -321,7 +318,6 @@ def process_molecule_hg(smiles):
 
     node_features = torch.tensor(node_features, dtype=torch.float32)
 
-    # ------- 原子边 -------
     edges, edge_features = [], []
     for bond in mol.GetBonds():
         i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -331,7 +327,6 @@ def process_molecule_hg(smiles):
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
     edge_attr  = torch.tensor(edge_features, dtype=torch.float32)
 
-    # ------- 你的基团 SMARTS 定义（原样保留）-------
     functional_groups_smarts = {
         "hydroxyl": "[OX2H]",
         "carboxyl": "C(=O)O",
@@ -342,7 +337,7 @@ def process_molecule_hg(smiles):
         "nitrile": "C#N",
         "sulfhydryl": "C",
         "sulfone": "S(=O)(=O)",
-        "heavy_atom_effect": "[P]",  # 增强自旋轨道耦合
+        "heavy_atom_effect": "[P]",
 
         "alkyne": "C#C",
         "nitro": "O=[N+]([O-])",
@@ -369,9 +364,9 @@ def process_molecule_hg(smiles):
         "aromatic_6_ring": "a1aaaaa1",
 
         "aromatic_hetero_in_ring": "[a;!#6;r]",
-        "pyridine_like_N": "[nX2;r;H0]",  # 吡啶型
-        "pyrrole_like_N": "[nH;r]",  # 吡咯型 N-H
-        "aromatic_N_positive": "[n+;r]",  # 芳香环内 N+
+        "pyridine_like_N": "[nX2;r;H0]",
+        "pyrrole_like_N": "[nH;r]",
+        "aromatic_N_positive": "[n+;r]",
         "O=C=S（氧-碳-硫累积）": "O=C=[#16]",
         "异硫氰酸基（–N=C=S）": "N=C=S",
         "烷基叠氮（R–N3）": "[#6]-N=[N+]=[N-]",
@@ -383,7 +378,6 @@ def process_molecule_hg(smiles):
     group_names = list(patt_dict.keys())
     N = node_features.size(0)
 
-    # -------（保留你原先的原子×基团类型 one-hot）-------
     group_membership = torch.zeros((N, len(group_names)), dtype=torch.float32)
     for g_idx, name in enumerate(group_names):
         patt = patt_dict[name]
@@ -395,9 +389,8 @@ def process_molecule_hg(smiles):
                 group_membership[atom_idx, g_idx] = 1.0
     node_features = torch.cat((node_features, group_membership), dim=1)
 
-    # ------- 基团“实例”节点（超图的关键）：每次匹配 = 一个基团节点 -------
-    group_nodes = []               # [(name, [atom_ids]), ...]
-    group_type_oh = []             # 每个实例的类型 one-hot
+    group_nodes = []
+    group_type_oh = []
     for name, patt in patt_dict.items():
         if patt is None:
             continue
@@ -416,7 +409,6 @@ def process_molecule_hg(smiles):
     else:
         group_type_oh = torch.empty(0, len(group_names))
 
-    # 基团节点的初始特征：类型 one-hot + 成员原子的原子特征均值
     if len(group_nodes) > 0:
         g_from_atoms = []
         for _, members in group_nodes:
@@ -426,20 +418,18 @@ def process_molecule_hg(smiles):
     else:
         x_group = torch.empty(0, len(group_names) + node_features.size(1))
 
-    # 原子–基团 二部边（超图关联）
+
     gi, ai = [], []
     for gid, (_n, members) in enumerate(group_nodes):
         for a in members:
             gi.append(gid); ai.append(a)
     atom2group_index = torch.tensor([gi, ai], dtype=torch.long) if gi else torch.empty(2,0, dtype=torch.long)
 
-    # 基团–基团边：将原子键“收缩”到基团层
-    # 映射 原子 -> 参与的基团实例列表
+
     atom2groups = defaultdict(list)
     for gid, (_n, members) in enumerate(group_nodes):
         for a in members:
             atom2groups[a].append(gid)
-    # 原子键(i,j) → 基团对(gi,gj)
     gg_src, gg_dst = [], []
     erow, ecol = edge_index
     for i, j in zip(erow.tolist(), ecol.tolist()):
@@ -456,7 +446,6 @@ def process_molecule_hg(smiles):
     else:
         edge_index_group = torch.empty(2,0, dtype=torch.long)
 
-    # ------- 分子全局特征（保留你的做法）-------
     functional_groups_count = {key: 0 for key in functional_groups_smarts.keys()}
     for name, patt in patt_dict.items():
         if patt is None:
@@ -468,7 +457,6 @@ def process_molecule_hg(smiles):
     global_features1 = torch.tensor([num_donors, num_acceptors, logp, tpsa], dtype=torch.float32).unsqueeze(0)
     global_features  = torch.cat((global_features1, global_features2), dim=1)
 
-    # 原子拼接全局（保留你的做法）
     global_features_repeated = global_features.repeat(N, 1)
     node_features = torch.cat([node_features, global_features_repeated], dim=1)
 
@@ -484,7 +472,6 @@ def combine_molecules_hg(smiles1, smiles2, smiles3, smiles4, x1=None, x2=None, x
     g3 = process_molecule_hg(smiles3)
     g4 = process_molecule_hg(smiles4)
 
-    # ------- 浓度/温度拼接到原子（保留你的写法）-------
     x1 = torch.tensor([x1,0], dtype=torch.float32)
     x2 = torch.tensor([x2,0], dtype=torch.float32)
     x3 = torch.tensor([x3,0], dtype=torch.float32)
@@ -494,7 +481,6 @@ def combine_molecules_hg(smiles1, smiles2, smiles3, smiles4, x1=None, x2=None, x
     def add_conc(x_atom, c): return torch.cat([x_atom, c.expand(x_atom.size(0), -1)], dim=1)
     g1x, g2x, g3x, g4x = add_conc(g1.x, x1), add_conc(g2.x, x2), add_conc(g3.x, x3), add_conc(g4.x, x4)
 
-    # ------- 原子层 offset & 拼接 -------
     off_a1 = 0
     off_a2 = off_a1 + g1x.size(0)
     off_a3 = off_a2 + g2x.size(0)
@@ -509,7 +495,6 @@ def combine_molecules_hg(smiles1, smiles2, smiles3, smiles4, x1=None, x2=None, x
     ], dim=1)
     combined_edge_attr = torch.cat([g1.edge_attr, g2.edge_attr, g3.edge_attr, g4.edge_attr], dim=0)
 
-    # ------- 基团层 offset & 拼接（关键）-------
     G1, G2, G3, G4 = g1.x_group.size(0), g2.x_group.size(0), g3.x_group.size(0), g4.x_group.size(0)
     off_g1, off_g2, off_g3, off_g4 = 0, G1, G1+G2, G1+G2+G3
 
@@ -596,35 +581,29 @@ def combine_molecules_hg(smiles1, smiles2, smiles3, smiles4, x1=None, x2=None, x
         torch.cat([x4, x1, x2, x3, T]),
     ], dim=0)
 
-    # ------- 原子层分子掩码（保留）-------
     offset1 = g1x.size(0); offset2 = offset1 + g2x.size(0); offset3 = offset2 + g3x.size(0)
     m1 = torch.zeros(combined_x.size(0), dtype=torch.bool); m1[:offset1] = True
     m2 = torch.zeros_like(m1); m2[offset1:offset2] = True
     m3 = torch.zeros_like(m1); m3[offset2:offset3] = True
     m4 = torch.zeros_like(m1); m4[offset3:] = True
 
-    # ------- 基团层分子掩码（新增，可选）-------
 
 
     return MixData(
-        # 原子层
         x=combined_x,
         edge_index=combined_edge_index,
         edge_attr=combined_edge_attr,
 
-        # 基团层（新增）
         x_group=x_group_all,
         edge_index_group=eig_all,
         atom2group_index=atom2group_index_all,
         group_mol_id=group_mol_id,
         group_mask1=gmask1, group_mask2=gmask2, group_mask3=gmask3, group_mask4=gmask4,
 
-        # 分子/混合物层（保留）
         global_edge_index=global_edge_index,
         global_edge_attr=global_edge_attr,
         global_node_attr=global_node_attr,
 
-        # 原子层掩码（保留）
         mask1=m1, mask2=m2, mask3=m3, mask4=m4
     )
 
@@ -708,15 +687,12 @@ class FeatureCrossAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = 32
 
-        # 首先把原特征维度映射到 model_dim
         self.q_map = nn.Linear(dim_in_q, 128)
         self.k_map = nn.Linear(dim_in_kv, 128)
         self.v_map = nn.Linear(dim_in_kv, 128)
 
-        # Attention 后再投回 model_dim
         self.out_map = nn.Linear(128, model_dim)
         self.Qout = nn.Linear(128, model_dim)
-        # 输出再映射回原dim_in_q
         self.norm = nn.LayerNorm(model_dim)
 
         self.dropout = nn.Dropout(dropout)
@@ -729,21 +705,17 @@ class FeatureCrossAttention(nn.Module):
         """
 
 
-        # ========== 1) 映射 ==========
         Qm = self.q_map(Q_in)  # (B, L_q, model_dim)
         Km = self.k_map(KV_in) # (B, L_kv, model_dim)
         Vm = self.v_map(KV_in) # (B, L_kv, model_dim)
         B, L_q, Dq = Qm.shape
         _, L_kv, Dk = Km.shape
-        # ========== 2) 先拆成多头 ==========
-        # 每个头负责一部分特征
+
         Qh = Qm.view(B, L_q, self.num_heads, self.d_k).permute(0, 2, 3, 1)  # (B, H, d_k, L_q)
         Kh = Km.view(B, L_kv, self.num_heads, self.d_k).permute(0, 2, 3, 1) # (B, H, d_k, L_kv)
         Vh = Vm.view(B, L_kv, self.num_heads, self.d_k).permute(0, 2, 3, 1) # (B, H, d_k, L_kv)
 
-        # ========== 3) 现在交换特征维 & token维 ==========
-        # 现在注意力是在“特征之间”计算
-        # 这里 d_k 视为 sequence-like 维度，而 L_q/L_kv 是特征通道的上下文
+
         scores = torch.matmul(Qh, Kh.transpose(-2, -1)) * self.scale  # (B, H, d_k, d_k)
         if mask is not None:
             scores = scores.masked_fill(~mask.unsqueeze(1), float('-inf'))
@@ -752,10 +724,8 @@ class FeatureCrossAttention(nn.Module):
 
         out_h = torch.matmul(attn, Vh)  # (B, H, d_k, L_q)
 
-        # ========== 4) 合并头 ==========
         out_h = out_h.permute(0, 3, 1, 2).contiguous().view(B, L_q, self.num_heads * self.d_k)  # (B, L_q, model_dim)
 
-        # ========== 5) 输出映射 ==========
         out = self.out_map(out_h)
         Qm_ = self.Qout(Qm)
         out = self.norm(Qm_ + out)
@@ -771,14 +741,8 @@ from torch_geometric.nn import GCNConv, Set2Set, global_mean_pool, NNConv
 from torch_geometric.utils import subgraph as pyg_subgraph
 from torch.nn import TransformerEncoderLayer, TransformerEncoder, TransformerDecoderLayer, TransformerDecoder
 
-# =============== 工具：局部 a2g/g2a scatter ===============
 def atoms_to_groups_local(x_atom, atom_idx, group_idx, G, reduce='mean'):
-    """
-    x_atom:    [Na, Ha] 当前子图原子表示
-    atom_idx:  [N_inc]  每条原子->基团“归属”使用的 原子局部索引
-    group_idx: [N_inc]  每条“归属”的 基团局部索引
-    G:         基团数
-    """
+
     if G == 0 or atom_idx.numel() == 0:
         return x_atom.new_zeros((G, x_atom.size(1)))
     Ha = x_atom.size(1)
@@ -795,12 +759,7 @@ def atoms_to_groups_local(x_atom, atom_idx, group_idx, G, reduce='mean'):
     return out
 
 def groups_to_atoms_local(x_group, group_idx, atom_idx, N, reduce='mean'):
-    """
-    x_group:   [G, Hg]
-    group_idx: [N_inc]
-    atom_idx:  [N_inc]
-    N:         原子数
-    """
+
     if x_group.size(0) == 0 or atom_idx.numel() == 0:
         return x_group.new_zeros((N, x_group.size(1)))
     Hg = x_group.size(1)
@@ -816,42 +775,27 @@ def set2set_pool(features: torch.Tensor,
                  batch: torch.Tensor,
                  size: int,
                  s2s: Set2Set) -> torch.Tensor:
-    """
-    对 batch 中存在的“包”做 Set2Set，然后把结果回填到固定大小 size 的输出中。
-    缺失的包返回全零向量。
-    features: [N_items, D]
-    batch:    [N_items]，取值范围在 [0, size-1]（可能有缺失的 id）
-    size:     目标包数量（固定输出行数）
-    s2s:      Set2Set 模块（不带 size 参数）
-    返回: [size, 2D]
-    """
+
 
     if size == 0:
-        # 没有任何包时，返回 [0, 2D]（保持维度语义）
         D = features.size(1) if features.numel() > 0 else 0
         return features.new_zeros((0, 2 * D))
 
     if features.numel() == 0 or batch.numel() == 0:
-        # 有包但没有元素属于它们 -> 全零
         D = features.size(1) if features.numel() > 0 else 0
         return features.new_zeros((size, 2 * D))
 
-    # 1) 只对实际出现的包做紧致映射：present_ids -> [0..P-1]
     present = torch.unique(batch)                      # [P]
     P = int(present.numel())
-    # 建立 old_id -> new_id 映射表（长度=size，缺失为 -1）
     id_map = -torch.ones(size, dtype=torch.long, device=batch.device)
     id_map[present] = torch.arange(P, device=batch.device)
     compact_batch = id_map[batch]                      # [N_items] in [0..P-1]
 
-    # 2) 在紧致批上跑 Set2Set
     out_compact = s2s(features, compact_batch)         # [P, 2D]
 
-    # 3) 回填到固定大小 size 的输出
     out = features.new_zeros((size, out_compact.size(1)))
     out[present] = out_compact
     return out
-# =============== Atom<->Group 桥（无边特征） ===============
 class AtomGroupBridgeFiLM(nn.Module):
     def __init__(self, atom_dim, group_dim, cond_dim, hidden=160,s2s_steps: int = 2):
         super().__init__()
@@ -859,7 +803,6 @@ class AtomGroupBridgeFiLM(nn.Module):
         self.g2a_proj = nn.Linear(group_dim, atom_dim)
         self.g_proj = nn.Linear(40, group_dim-80)
 
-        # FiLM 调制
         self.film_gamma = nn.Sequential(
             nn.Linear(cond_dim, hidden), nn.ReLU(),
             nn.Linear(hidden, group_dim)
@@ -869,14 +812,11 @@ class AtomGroupBridgeFiLM(nn.Module):
             nn.Linear(hidden, group_dim)
         )
         self.a_proj_to_g = nn.Linear(atom_dim, group_dim)
-        # Set2Set 聚合（A->G, G->A 用两个实例，互不共享参数）
         self.s2s_a2g = Set2Set(group_dim, processing_steps=s2s_steps)   # 输出 2*Dg
         self.merge_a2g = nn.Linear(2 * group_dim, group_dim)            # 2*Dg -> Dg
 
-        # （可选）基团级 GCN
         self.group_gcn = GeneralConv(group_dim, group_dim-80,attention=True)
 
-        # G->A：Set2Set 聚合回原子，再映射回 Ha
         self.s2s_g2a = Set2Set(group_dim, processing_steps=s2s_steps)   # 输出 2*Dg
         self.g_proj_to_a = nn.Linear(2 * group_dim, atom_dim)           # 2*Dg -> Ha
 
@@ -891,31 +831,25 @@ class AtomGroupBridgeFiLM(nn.Module):
         x_group = self.g_proj(x_group)
 
         if Gm == 0 or atom_idx.numel() == 0 or group_idx.numel() == 0:
-            # 保证返回的 xg 形状是 [0, Dg]
             xg_empty = x_atom.new_zeros((0, Dg))
             return x_atom, xg_empty
 
         xa_proj = self.a_proj_to_g(x_atom)  # [Na, Dg]
-        # 取归属边上的原子表示，形成“实例-包”的 items
         xa_items = xa_proj.index_select(0, atom_idx)  # [N_inc, Dg]
-        # 用 group_idx 作为 batch，把每个基团的原子集合打包
         xg_a2g = set2set_pool(xa_items, group_idx, size=Gm, s2s=self.s2s_a2g)  # [Gm, 2*Dg]
         xg_from_atom = self.merge_a2g(xg_a2g)  # [Gm, Dg]
 
 
 
 
-        # 2) 条件聚合
         cond_g = atoms_to_groups_local(cond_atom, atom_idx, group_idx, Gm, reduce='mean')
 
-        # 3) FiLM 调制
         if Gm > 0:
             gamma = self.film_gamma(cond_g)                        # [Gm, Dg]
             beta  = self.film_beta(cond_g)                         # [Gm, Dg]
             xg    = gamma * xg_from_atom  + beta   # [Gm, Dg]
         else:
-            xg    = xg_from_atom  # [0, Dg] 安全路径
-        # 4) 基团图
+            xg    = xg_from_atom
         if Gm > 0 and (edge_index_group is not None) and (edge_index_group.numel() > 0):
             xg = F.relu(self.group_gcn(xg, edge_index_group))
 
@@ -924,7 +858,6 @@ class AtomGroupBridgeFiLM(nn.Module):
         xg = torch.cat((x_group,xg),dim=1)
 
         xg_items = xg.index_select(0, group_idx)  # [N_inc, Dg]
-        # 用 atom_idx 作为 batch，把每个原子的基团集合打包
         xa_g2a = set2set_pool(xg_items, atom_idx, size=Na, s2s=self.s2s_g2a)  # [Na, 2*Dg]
         xa_from_group = self.g_proj_to_a(xa_g2a)
 
@@ -935,12 +868,7 @@ class AtomGroupBridgeFiLM(nn.Module):
 
 from torch_geometric.nn import global_mean_pool
 def pool_groups_per_graph(xg_local, a2g_local, batch_sub):
-    """
-    xg_local:   [Gm, Dg]          该子图（该分子）的所有基团向量（按 batch 拼成一个大块）
-    a2g_local:  [2, N_inc]        (group_local_idx, atom_local_idx)
-    batch_sub:  [Na]              该子图内每个“局部原子”的 batch 索引(0..B_sub-1)
-    return:     [B_sub, Dg]       每个样本（在该mask下）一条基团全局向量（平均）
-    """
+
     device = xg_local.device
     Dg = xg_local.size(1) if xg_local.numel() > 0 else 1
     if batch_sub.numel() == 0:
@@ -950,20 +878,16 @@ def pool_groups_per_graph(xg_local, a2g_local, batch_sub):
     if xg_local.numel() == 0:
         return torch.zeros((B_sub, Dg), device=device)
 
-    # 用 a2g 的“原子 batch”来给每个 group 打上它属于哪个 batch 的标签
     group_batch = torch.full((xg_local.size(0),), -1, dtype=torch.long, device=device)
     if a2g_local.numel() > 0:
         g_idx = a2g_local[0]                # [N_inc]
         a_idx = a2g_local[1]                # [N_inc]
         a_batch = batch_sub.index_select(0, a_idx)  # [N_inc]
-        # 用第一次出现的 batch 作为该 group 的 batch（一个 group 不会跨样本）
-        # 为了简单起见，使用“只写不回滚”的方式
+
         group_batch[g_idx] = torch.where(group_batch[g_idx] < 0, a_batch, group_batch[g_idx])
 
-    # 对于没有成员的 group，默认丢到 batch 0；也可以改成忽略
     group_batch = torch.where(group_batch < 0, torch.zeros_like(group_batch), group_batch)
 
-    # scatter 到 [B_sub, Dg]
     out = torch.zeros((B_sub, Dg), device=device)
     cnt = torch.zeros((B_sub, 1), device=device)
     out.index_add_(0, group_batch, xg_local)
@@ -974,12 +898,10 @@ def pool_groups_per_graph(xg_local, a2g_local, batch_sub):
 class GroupPoolSet2Set(torch.nn.Module):
     def __init__(self, in_dim: int, processing_steps: int = 2, num_layers: int = 1):
         super().__init__()
-        # 注意：PyG 的 Set2Set 输出维度 = 2 * in_dim
         self.set2set = Set2Set(in_dim, processing_steps=processing_steps, num_layers=num_layers)
 
     @torch.no_grad()
     def _safe_mode(self, x: torch.Tensor) -> torch.Tensor:
-        # torch.mode 在全部相同或空时也要安全返回
         if x.numel() == 0:
             return torch.tensor(0, device=x.device, dtype=x.dtype)
         return x.mode()[0]
@@ -989,63 +911,44 @@ class GroupPoolSet2Set(torch.nn.Module):
                 a2g_local: torch.Tensor,   # [2, N_inc] 行0=group_idx, 行1=atom_idx(局部)
                 batch_sub: torch.Tensor    # [Na_sub]   子图原子 -> 子图内batch id
                 ) -> torch.Tensor:
-        """
-        返回：group_pool [B_sub, 2*Dg]（严格与 batch_sub 的样本数对齐）
-        - 若某个样本没有任何基团，返回该行全零；
-        - 若有基团但没出现在 a2g_local，也会被分配到默认 batch（batch_sub 的众数）。
-        """
+
         device = batch_sub.device
         Dg = int(xg_local.size(1)) if xg_local.numel() > 0 else 0
 
-        # 子图里的样本数（行数目标）
         if batch_sub.numel() == 0:
             return xg_local.new_zeros((1, 2 * Dg))
         B_sub = int(batch_sub.max().item()) + 1
 
-        # 没有任何基团：直接返回全零（B_sub 行）
         if xg_local.numel() == 0:
             return xg_local.new_zeros((B_sub, 2 * Dg))
 
-        # ==== 构造 group -> batch_sub 的映射 ====
         Gm = xg_local.size(0)
         group_batch_local = torch.full((Gm,), -1, dtype=torch.long, device=device)
 
         if a2g_local.numel() > 0:
-            g_idx = a2g_local[0]  # [N_inc]
-            a_idx = a2g_local[1]  # [N_inc]（原子是子图局部索引）
+            g_idx = a2g_local[0]
+            a_idx = a2g_local[1]
             group_batch_local[g_idx] = batch_sub[a_idx]
 
-        # 仍然存在未被映射的基团，给默认 batch（众数）；保证每个基团都有合法 batch id
         if (group_batch_local < 0).any():
             default_b = self._safe_mode(batch_sub.long())
             group_batch_local[group_batch_local < 0] = default_b
 
-        # ==== 紧致化 present batch id，避免 Set2Set 产生“对不齐” ====
-        present = torch.unique(group_batch_local)                 # [P]，真实出现的 batch id
+        present = torch.unique(group_batch_local)
         P = int(present.numel())
         id_map = -torch.ones(B_sub, dtype=torch.long, device=device)
-        id_map[present] = torch.arange(P, device=device)          # 原始 id -> 紧致 id [0..P-1]
-        compact_batch = id_map[group_batch_local]                 # [Gm] in [0..P-1]
+        id_map[present] = torch.arange(P, device=device)
+        compact_batch = id_map[group_batch_local]
 
-        # ==== 在紧致批上跑 Set2Set ====
         # out_compact: [P, 2*Dg]
         out_compact = self.set2set(xg_local, compact_batch)
 
-        # ==== 回填到固定大小 [B_sub, 2*Dg]，缺失 id 自动为零 ====
         out = xg_local.new_zeros((B_sub, out_compact.size(1)))
         out[present] = out_compact
         return out
 
 class CrossMolGroupInter(nn.Module):
-    """
-    跨分子基团交互注意力（提速版）：
-    - 一次性拼出所有 token（三个分子 * 全部样本），
-      用 pad_sequence 构成 [B_sub, L_max, H] 的批，配合 key_padding_mask 调一次 MHA。
-    - per-molecule / per-mixture 读出使用不同的 Set2Set 聚合。
-    返回:
-      per_mol_out: list 长度 K，每个 [B_sub, group_dim]
-      mix_feat:     [B_sub, 2*in_dim] （Set2Set 聚合）
-    """
+
     def __init__(self, group_dim: int, K: int, mol_emb_dim: int = 16,
                  num_heads: int = 4, use_set2set: bool = True, s2s_steps: int = 2):
         super().__init__()
@@ -1058,7 +961,6 @@ class CrossMolGroupInter(nn.Module):
         self.mha2 = nn.MultiheadAttention(self.in_dim, num_heads, batch_first=True)
 
 
-        # === 2. 前馈网络 (FFN) ===
         self.ffn = nn.Sequential(
             nn.Linear(self.in_dim, 2 * self.in_dim),
             nn.ReLU(),
@@ -1075,35 +977,27 @@ class CrossMolGroupInter(nn.Module):
 
         self.use_set2set = use_set2set
         if use_set2set:
-            # 分子和混合物分别使用不同的 Set2Set 聚合
             self.mol_s2s = Set2Set(self.in_dim, processing_steps=s2s_steps)  # 分子层级聚合
             self.mix_s2s = Set2Set(self.in_dim, processing_steps=s2s_steps)  # 混合物层级聚合
 
     def forward(self, xg_list, gb_list, return_attn=False):
-        """
-        xg_list: [xg1, xg2, xg3], xg_i: [Gi, group_dim]
-        gb_list: [gb1, gb2, gb3], gb_i: [Gi] in [0..B_sub-1]
-        """
+
         device = xg_list[0].device
         K = self.K
 
-        # 计算 B_sub（同一mini-batch内混合物个数）
         if any(gb.numel() > 0 for gb in gb_list):
             B_sub = int(max((int(gb.max()) if gb.numel() > 0 else -1) for gb in gb_list) + 1)
         else:
             B_sub = 1
 
-        # ==== 1) 拼接所有 token（带分子ID嵌入） ====
         tokens_all, token_b, token_bi, token_mol = [], [], [], []
         for i in range(K):
             xg_i, gb_i = xg_list[i], gb_list[i]
             if xg_i.numel() == 0:
                 continue
 
-            # 🧩 构造 one-hot 表示分子ID
             one_hot = F.one_hot(torch.tensor(i, device=device), num_classes=K).float()  # [K]
             one_hot = one_hot.unsqueeze(0)  # [1, K]
-            # 🔁 通过 Linear 层映射成 embedding
             me = self.mol_emb(one_hot)      # [1, mol_emb_dim]
             me = me.expand(xg_i.size(0), -1)  # [Gi, mol_emb_dim]
 
@@ -1114,7 +1008,6 @@ class CrossMolGroupInter(nn.Module):
             token_mol.append(torch.full((xg_i.size(0),), i, device=device, dtype=torch.long))
 
         if len(tokens_all) == 0:
-            # 没有任何基团
             per_mol_out = [torch.zeros(B_sub, self.group_dim, device=device) for _ in range(K)]
             mix_feat = torch.zeros(B_sub, 2 * self.in_dim, device=device) if self.use_set2set else None
             return per_mol_out, mix_feat
@@ -1124,38 +1017,29 @@ class CrossMolGroupInter(nn.Module):
         bi_idx  = torch.cat(token_bi,  dim=0).long()   # [N_tok]  global (b,i) id
         mol_id = torch.cat(token_mol, dim=0).long()  # [N_tok]
 
-        # ==== 2) 构造按 mixture 分组的“批内序列” ====
-        # 把 token 按 b 排序 -> 能按 b 一刀切地切分
+
         sort_order = torch.argsort(b_idx)              # [N_tok]
         feats_sorted  = feats.index_select(0, sort_order)
         b_sorted      = b_idx.index_select(0, sort_order)
         bi_sorted     = bi_idx.index_select(0, sort_order)
         mol_sorted = mol_id.index_select(0, sort_order)  # [N_tok]
 
-        # 每个 b 有多少 token：
         counts = torch.bincount(b_sorted, minlength=B_sub)  # [B_sub]
-        # 按 b 切成列表（Python层切一次，MHA 只调 1 次）
         chunks = torch.split(feats_sorted, counts.tolist())
-        # pad 成同长度
         from torch.nn.utils.rnn import pad_sequence
         padded = pad_sequence(chunks, batch_first=True, padding_value=0.0)      # [B_sub, L_max, H_in]
 
-        # key_padding_mask: True=要mask（pad位置）——每行后面的 pad 全是 0
         L_max = padded.size(1)
-        # 有效长度 lens: [B_sub]
         lens = counts
         arange_L = torch.arange(L_max, device=device).unsqueeze(0)              # [1, L_max]
         key_pad_mask = arange_L >= lens.unsqueeze(1)                            # [B_sub, L_max], bool
 
-        # ==== 3) 一次 MHA ====
         attn_out, attn_mat1 = self.mha(padded, padded, padded, key_padding_mask=key_pad_mask)  # [B_sub, L_max, H_in]
 
-        # (b) FFN + 残差 + LayerNorm
         padded = self.norm2(padded + attn_out)
         attn_out, attn_mat2 = self.mha2(padded, padded, padded, key_padding_mask=key_pad_mask)
         x = self.norm3(padded + attn_out)
 
-        # === 4) 去 pad ===
         valid_mask = (torch.arange(L_max, device=device)[None, :] < lens[:, None])
         x_flat = x.reshape(-1, x.size(-1))[valid_mask.view(-1)]
 
@@ -1164,8 +1048,7 @@ class CrossMolGroupInter(nn.Module):
         inv[sort_order] = torch.arange(N, device=device)
         attn_unsorted = x_flat[inv]  # [N_tok, H_in]                # [N_tok, H_in]             # [N_tok, H_in]
 
-        # ==== 4) 读出（使用 Set2Set 聚合） ====
-        # 4.1 per-molecule：通过 Set2Set 聚合每个分子的基团信息
+
         mol_id_per_token = (bi_idx % self.K)  # [N_tok]
 
 
@@ -1176,22 +1059,17 @@ class CrossMolGroupInter(nn.Module):
             if mask_i.any():
                 part_i = attn_unsorted[mask_i]  # [N_i, H_in]
                 b_idx_i = b_idx[mask_i]  # [N_i]
-                # 每个“混合物 b”在“第 i 个分子”上的 Set2Set 聚合
                 s2s_i = self.mol_s2s(part_i, b_idx_i)  # [B_sub, 2*H_in]
             else:
                 s2s_i = attn_unsorted.new_zeros(B_sub, 2 * self.in_dim)
-            # 可选线性读出到 group_dim（与你原逻辑一致）
             per_mol_out.append(self.readout(s2s_i))  # [B_sub, group_dim]
 
-        # 4.2 per-mixture（Set2Set 聚合混合物）：
-        # 使用 Set2Set 聚合整个混合物的特征
         if self.use_set2set:
             mix_feat = self.mix_s2s(attn_unsorted, b_idx)          # [B_sub, 2*H_in]
         else:
             mix_feat = None
 
         if return_attn:
-            # 计算每个 mixture 的起始下标，方便画图分割
             b_offsets = torch.zeros(B_sub + 1, dtype=torch.long, device=device)
             b_offsets[1:] = torch.cumsum(counts, dim=0)  # [B_sub+1]，第 i 个 mixture 的范围是 [b_offsets[i], b_offsets[i+1])
 
@@ -1209,13 +1087,10 @@ class CrossMolGroupInter(nn.Module):
 
 
 
-# ====== 新增：把 a2g_local + batch_sub 映射成“本分子基团的紧致 batch id” ======
 def _groups_batch_from_a2g_local(xg_local: torch.Tensor,
                                  a2g_local: torch.Tensor,
                                  batch_sub: torch.Tensor) -> torch.Tensor:
-    """
 
-    """
     device = xg_local.device
     Gm = xg_local.size(0)
     if Gm == 0:
@@ -1231,31 +1106,24 @@ def _groups_batch_from_a2g_local(xg_local: torch.Tensor,
         default_b = batch_sub.mode()[0] if batch_sub.numel() > 0 else torch.tensor(0, device=device)
         group_batch_self[group_batch_self < 0] = default_b
 
-    # 紧致化到 0..B_sub-1
     present = torch.unique(batch_sub)
-    # present 已经天然是 0..B_sub-1，如果你有非连续 id，这里再做一次 map 更保险
     id_map = -torch.ones(int(present.max().item()) + 1, dtype=torch.long, device=device)
     id_map[present] = torch.arange(present.numel(), device=device)
     compact = id_map[group_batch_self]
     return compact
 
-# =============== 融合后的 MesoNet（不改你原有主干逻辑） ===============
 class MesoNet(nn.Module):
     def __init__(self, input_dim, edge_dim, hidden_dim, output_dim,
                  d_group_in, d_group_hidden=128):
-        """
-        d_group_in 必须传入 data.x_group.size(1)
-        """
+
         super(MesoNet, self).__init__()
 
-        # ======= 你原有的层（保持） =======
         self.K = 4
         self.mol_emb_dim = 16
 
-        # 跨分子基团交互注意力（输入用基团维 hidden_dim）
         self.cross_group_attn = CrossMolGroupInter(
-            group_dim=hidden_dim,  # 你的基团表示维度
-            K=4,  # 三个分子
+            group_dim=hidden_dim,
+            K=4,
             mol_emb_dim=16,
             num_heads=4,
             use_set2set=True,
@@ -1323,7 +1191,6 @@ class MesoNet(nn.Module):
         self.lstm_a2_1 = CfC(32, AutoNCP(66,32), batch_first=True)
         self.NCP= CfC(162, AutoNCP(320,160), batch_first=True)
 
-        # FiLM 参数
         self.c1_gamma = nn.Sequential(nn.Linear(168, 160), nn.ReLU(), nn.Linear(160, 160))
         self.c1_beta  = nn.Sequential(nn.Linear(168, 160), nn.ReLU(), nn.Linear(160, 160))
         self.c2_gamma = nn.Sequential(nn.Linear(168, 160), nn.ReLU(), nn.Linear(160, 160))
@@ -1331,7 +1198,6 @@ class MesoNet(nn.Module):
 
 
         self.group2group = nn.Linear(hidden_dim*2,32)
-        # ======= 新增：Atom<->Group 桥（无边特征） =======
 
         self.atom_group_bridge = AtomGroupBridgeFiLM(
             atom_dim=hidden_dim, group_dim=hidden_dim,cond_dim = 168, s2s_steps=2
@@ -1342,10 +1208,7 @@ class MesoNet(nn.Module):
 
     @staticmethod
     def _slice_group_view(data, mol_id, atom_mask):
-        """
-        返回该分子的 group 局部视图：xg_local / a2g_local / eig_local
-        a2g_local 的第二行（atom_idx）为该子图“原子局部索引”，可直接与子图张量对齐。
-        """
+
         device = data.x.device
         if data.group_mol_id.numel() == 0:
             return None
@@ -1393,7 +1256,6 @@ class MesoNet(nn.Module):
         x = data.x
         edge_index, edge_attr, batch = data.edge_index, data.edge_attr, data.batch
 
-        # ===== 你的原流程：取该分子的原子子图 =====
         subgraph_x = x[mask]
         subgraph_edge_index, subgraph_edge_attr = pyg_subgraph(mask, edge_index, edge_attr, relabel_nodes=True)
         x1 = subgraph_x[:, 0:41]
@@ -1409,7 +1271,6 @@ class MesoNet(nn.Module):
         x2_output = self.x2(x2)
         x2_output = self.relu(x2_output)
 
-        # =======（保持）你的注意力交互 =======
         inter, _ = self.inter(g.unsqueeze(1), G_.unsqueeze(1))
         inter = inter.squeeze(1)
         global_G = torch.cat((g, G_), dim=1)
@@ -1435,7 +1296,6 @@ class MesoNet(nn.Module):
         gamma1 = self.c1_gamma(global_G); beta1 = self.c1_beta(global_G)
         xm_film = gamma1 * xm + beta1
 
-        # ======= 插入：Atom<->Group 超图交互（无边特征）=======
         group_view = self._slice_group_view(data, mol_id, mask)
         xg_local  = group_view["xg_local"]
         a2g_local = group_view["a2g_local"]
@@ -1448,10 +1308,8 @@ class MesoNet(nn.Module):
             edge_index_group=eig_local,
             cond_atom=global_G,
             edge_attr_group=None
-            # <--- 新增
         )
 
-        # ======= 回到你的原子消息传递 + NCP =======
         hidden = torch.cat((xm_film, xm_film), dim=1)
         xm_catC = torch.cat((xm_film, C), dim=1).unsqueeze(1)
         _, hidden = self.NCP2(xm_catC, hidden)
