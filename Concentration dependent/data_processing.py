@@ -14,7 +14,7 @@ from torch_geometric.loader import DataLoader
 
 from pathlib import Path
 
-triple_csv_path = 'data/Activity coefficient.csv'
+triple_csv_path = 'data/Activity coefficient1.csv'
 
 class MixData(Data):
     def __init__(self, **kwargs):

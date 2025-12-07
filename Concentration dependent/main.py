@@ -12,14 +12,16 @@ from torch_geometric.utils import subgraph as pyg_subgraph
 from sklearn.model_selection import KFold,StratifiedKFold,train_test_split
 from torch.utils.data import Subset
 from pathlib import Path
+
 from data_processing import *
 from model.MesoNet import *
 
 
 
-epochs = 250
+
+epochs = 180
 k_folds = 5
-batch_size =  256
+batch_size =  32
 input_dim = atom_featurizer.dim
 edge_dim = bond_featurizer.dim
 hidden_dim = 160

@@ -143,13 +143,11 @@ class MesoNet(nn.Module):
     def process_subgraph(self, data, mask, mol_id):
 
         x = data.x
+        #Feature reading
         edge_index, edge_attr, batch = data.edge_index, data.edge_attr, data.batch
-
-
         subgraph_x = x[mask]
         subgraph_edge_index, subgraph_edge_attr = pyg_subgraph(mask, edge_index, edge_attr, relabel_nodes=True)
         group_view = self._slice_group_view(data, mol_id, mask)
-
         xg_local  = group_view["xg_local"]
         a2g_local = group_view["a2g_local"]
         eig_local = group_view["eig_local"]
@@ -164,19 +162,24 @@ class MesoNet(nn.Module):
         G_ = subgraph_x[:, hi_b_dim + hi_a_dim + hi_g_dim + 4 + G_dim + C_dim:]
         C = torch.cat((g[:, [hi_g_dim]], G_[:, [hi_g_dim]], G_[:, [hi_g_dim + C_dim]]), dim=1)
         global_G =C
-
-
         x2_output = self.x2(x2)
         x2_output = self.relu(x2_output)
+
+
+        #cross-attention
+        #Mixture - Molecular
         inter, _ = self.inter(g.unsqueeze(1), G_.unsqueeze(1))
         inter = inter.squeeze(1)
 
+        #Molecular -  functional group attribution
         global_updated, _ = self.attn_global_group(x3.unsqueeze(1), inter.unsqueeze(1))
         global_updated = global_updated.squeeze(1)
 
+        #Group Attribution - Atomic feature
         group_updated, _ = self.attn_group_atom(x1.unsqueeze(1), global_updated.unsqueeze(1))
         group_updated = group_updated.squeeze(1)
 
+        #NCP solvent prior
         x2_input = x2_output.unsqueeze(1)
         predicted_steps, hidden_state = [], torch.cat((group_updated, global_updated, C), dim=1)
         for _ in range(3):
@@ -185,13 +188,13 @@ class MesoNet(nn.Module):
             predicted_steps.append(output.view(output.size(0), -1))
         x2_output = torch.cat(predicted_steps, dim=-1)
         x2_output = self.relu(self.x22(x2_output))
-
         xm = self.xm3(torch.cat((x2_output, x1, global_updated), dim=1))
         xm = self.relu(xm)
 
         gamma1 = self.c1_gamma(global_G); beta1 = self.c1_beta(global_G)
         xm_film = gamma1 * xm + beta1
 
+        #Atomic group bridge, achieving characteristic aggregation from atoms to groups
         xm_film, xg_after, type_ids_local = self.atom_group_bridge(
             x_atom=xm_film,
             atom_idx=a2g_local[1],
@@ -203,6 +206,8 @@ class MesoNet(nn.Module):
         )
 
         edge_attr_group =None
+
+        #Concentration Aware module
 
         hidden = torch.cat((xm_film,xm_film),dim=1)
         xm_catC = torch.cat((xm_film, C), dim=1).unsqueeze(1)

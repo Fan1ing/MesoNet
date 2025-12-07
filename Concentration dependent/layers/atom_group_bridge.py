@@ -115,7 +115,6 @@ class AtomGroupBridgeFiLM(nn.Module):
             xg    = gamma * xg  + beta   # [Gm, Dg]
         else:
             xg    = xg_from_atom  # [0, Dg] 安全路径
-        # 4) 基团图
         '''if Gm > 0 and (edge_index_group is not None) and (edge_index_group.numel() > 0):
             xg = self.group_gcn2(xg, edge_index_group)'''
         xg = torch.cat((xg, cond_g), dim=1)
