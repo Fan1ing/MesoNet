@@ -18,7 +18,7 @@ The framework also relies on \*\*PyTorch Geometric\*\*.
 
 
 
-\### Required Python Libraries
+### Required Python Libraries
 
 Please ensure the following libraries are installed:
 
@@ -44,7 +44,7 @@ Please ensure the following libraries are installed:
 
 
 
-\## Code Structure and Data Generation
+## Code Structure and Data Generation
 
 
 
@@ -83,7 +83,6 @@ In practical applications, tuning hyperparameters for each property may further 
 
 
 ---
-
 
 
 ## Continuously Updated
