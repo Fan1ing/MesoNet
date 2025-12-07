@@ -4,9 +4,17 @@ from torch_geometric.nn import NNConv, Set2Set,AttentiveFP,global_mean_pool,Gene
 from ncps.wirings import AutoNCP
 from torch_geometric.utils import subgraph as pyg_subgraph
 
-from layers import *
-from atom_group_bridge import *
-from utils import _groups_batch_from_a2g_local
+from layers.attention import *
+from layers.atom_group_bridge import *
+from model.utils import _groups_batch_from_a2g_local
+hi_a_dim =6
+hi_b_dim =41
+G_dim = hi_g_dim = 40
+C_dim= 1
+
+feature_dim = 32
+
+
 
 class MesoNet(nn.Module):
     def __init__(self, input_dim, edge_dim, hidden_dim, output_dim,
@@ -25,31 +33,24 @@ class MesoNet(nn.Module):
             use_set2set=True,
             s2s_steps=2
         )
-        self.attn_atom_elem   = FeatureCrossAttention(dim_in_q=32, dim_in_kv=32, model_dim=32, num_heads=4)
-        self.attn_group_atom  = FeatureCrossAttention(dim_in_q=32, dim_in_kv=32, model_dim=32, num_heads=4)
-        self.attn_global_group= FeatureCrossAttention(dim_in_q=40, dim_in_kv=32, model_dim=32, num_heads=4)
-        self.inter            = FeatureCrossAttention(dim_in_q=41, dim_in_kv=82, model_dim=32, num_heads=4)
+        self.attn_atom_elem   = FeatureCrossAttention(dim_in_q=feature_dim, dim_in_kv=feature_dim, model_dim=feature_dim, num_heads=4)
+        self.attn_group_atom  = FeatureCrossAttention(dim_in_q=feature_dim, dim_in_kv=feature_dim, model_dim=feature_dim, num_heads=4)
+        self.attn_global_group= FeatureCrossAttention(dim_in_q=G_dim, dim_in_kv=feature_dim, model_dim=feature_dim, num_heads=4)
+        self.inter            = FeatureCrossAttention(dim_in_q=G_dim+C_dim, dim_in_kv=G_dim*2+C_dim*2, model_dim=feature_dim, num_heads=4)
 
-        edge_hidden_dim = 32
-        self.a11 = NNConv(41, 32, nn.Sequential(
+        edge_hidden_dim = feature_dim
+        self.a11 = NNConv(hi_b_dim, feature_dim, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim), nn.ReLU(), nn.Dropout(p=0),
-            nn.Linear(edge_hidden_dim, 41 * 32)
+            nn.Linear(edge_hidden_dim, hi_b_dim * feature_dim)
         ), aggr="mean")
 
-        self.G = nn.Linear(21, 32)
-        self.NCP1 = CfC(32, AutoNCP(67,32), batch_first=True)
+        self.NCP1 = CfC(feature_dim, AutoNCP(feature_dim*2+C_dim*3,feature_dim), batch_first=True)
 
-        self.NCP2= CfC(163, AutoNCP(320,160), batch_first=True)
-        self.x22 = nn.Linear(96,96)
-        self.x2 = nn.Linear(6,32)
-        self.a21 = NNConv(32, 32, nn.Sequential(
-            nn.Linear(edge_dim, edge_hidden_dim), nn.ReLU(), nn.Dropout(p=0),
-            nn.Linear(edge_hidden_dim, 32 * 32)
-        ), aggr="mean")
-
+        self.NCP2= CfC(hidden_dim+C_dim*3, AutoNCP(hidden_dim*2,hidden_dim), batch_first=True)
+        self.x2 = nn.Linear(hi_a_dim,feature_dim)
+        self.x22 = nn.Linear(feature_dim*3,feature_dim*3)
         self.relu = nn.ReLU()
         self.xm3 = nn.Linear(hidden_dim, hidden_dim)
-
         self.subgraph_conv1 = NNConv(hidden_dim, hidden_dim, nn.Sequential(
             nn.Linear(edge_dim, edge_hidden_dim), nn.ReLU(), nn.Dropout(p=0.1),
             nn.Linear(edge_hidden_dim, hidden_dim * hidden_dim)
@@ -61,32 +62,28 @@ class MesoNet(nn.Module):
 
         self.global_conv = NNConv(hidden_dim*2+3, hidden_dim, nn.Sequential(
             nn.Linear(4, edge_hidden_dim), nn.ReLU(), nn.Dropout(p=0.3),
-            nn.Linear(edge_hidden_dim , 323*hidden_dim)
+            nn.Linear(edge_hidden_dim , (hidden_dim*2+3*C_dim)*hidden_dim)
         ), aggr='mean')
 
 
         self.set2set  = Set2Set(hidden_dim, processing_steps=2)
-        self.set2set2 = Set2Set(3*hidden_dim+3 , processing_steps=2)
+        self.set2set2 = Set2Set(3*hidden_dim+3*C_dim , processing_steps=2)
         self.setgroup = Set2Set(237, processing_steps=2)
 
-        self.group = nn.Linear(175,175)
-        self.g = nn.Linear(21, 32)
         self.fc = nn.Sequential(
             nn.Linear(2203+237,1024),
             nn.ReLU(),
             nn.Dropout(0),
-
             nn.Linear(1024, 512),
             nn.ReLU(),
             nn.Dropout(0),
-
             nn.Linear(512, 128),
             nn.ReLU(),
             nn.Linear(128, 1)
         )
 
 
-        # FiLM 参数
+        # FiLM
         self.c1_gamma = nn.Sequential(nn.Linear(3, 160), nn.ReLU(), nn.Linear(160, 160))
         self.c1_beta  = nn.Sequential(nn.Linear(3, 160), nn.ReLU(), nn.Linear(160, 160))
         self.c2_gamma = nn.Sequential(nn.Linear(3, 160), nn.ReLU(), nn.Linear(160, 160))
@@ -94,18 +91,11 @@ class MesoNet(nn.Module):
 
         self.c3_gamma = nn.Sequential(nn.Linear(3, 160), nn.ReLU(), nn.Linear(160, 160))
         self.c3_beta  = nn.Sequential(nn.Linear(3, 160), nn.ReLU(), nn.Linear(160, 160))
-
         self.c4_gamma = nn.Sequential(nn.Linear(3, 234), nn.ReLU(), nn.Linear(234, 234))
         self.c4_beta  = nn.Sequential(nn.Linear(3, 234), nn.ReLU(), nn.Linear(234, 234))
-
-        self.hidden= nn.Linear(163,323)
-
-        self.group2group = nn.Linear(hidden_dim,32)
-
         self.atom_group_bridge = AtomGroupBridgeFiLM(
             atom_dim=hidden_dim, group_dim=hidden_dim,cond_dim = 3, s2s_steps=2
         )
-
 
     @staticmethod
     def _slice_group_view(data, mol_id, atom_mask):
@@ -163,15 +153,16 @@ class MesoNet(nn.Module):
         xg_local  = group_view["xg_local"]
         a2g_local = group_view["a2g_local"]
         eig_local = group_view["eig_local"]
-        x1 = subgraph_x[:, 0:41]
+        x1 = subgraph_x[:, 0:hi_b_dim]
         x1 = self.a11(x1, subgraph_edge_index, subgraph_edge_attr)
         x1 = self.relu(x1)
-        x2 = subgraph_x[:, 41:47]
-        x3 = subgraph_x[:, 47:47+40]
+        x2 = subgraph_x[:, hi_b_dim:hi_b_dim + hi_a_dim]
+        x3 = subgraph_x[:, hi_b_dim + hi_a_dim:hi_b_dim + hi_a_dim + hi_g_dim]
 
-        g  = subgraph_x[:, 47+40+4:47+40+4+41]
-        G_ = subgraph_x[:, 47+40+4+41:]
-        C = torch.cat((g[:, [40]],G_[:, [40]], G_[:, [81]]), dim=1)
+        g = subgraph_x[:, hi_b_dim + hi_a_dim + hi_g_dim + 4:hi_b_dim + hi_a_dim + hi_g_dim + 4 + G_dim + C_dim]
+
+        G_ = subgraph_x[:, hi_b_dim + hi_a_dim + hi_g_dim + 4 + G_dim + C_dim:]
+        C = torch.cat((g[:, [hi_g_dim]], G_[:, [hi_g_dim]], G_[:, [hi_g_dim + C_dim]]), dim=1)
         global_G =C
 
 
@@ -200,6 +191,7 @@ class MesoNet(nn.Module):
 
         gamma1 = self.c1_gamma(global_G); beta1 = self.c1_beta(global_G)
         xm_film = gamma1 * xm + beta1
+
         xm_film, xg_after, type_ids_local = self.atom_group_bridge(
             x_atom=xm_film,
             atom_idx=a2g_local[1],
@@ -285,6 +277,7 @@ class MesoNet(nn.Module):
 
         expanded_x = torch.empty((batch_size * K, feat_dim), dtype=s1.dtype, device=device)
         expanded_x[0::K] = s1; expanded_x[1::K] = s2; expanded_x[2::K] = s3
+
 
         '''gamma3 = self.c3_gamma(global_node_attr); beta3 = self.c3_beta(global_node_attr)
         expanded_x = gamma3 * expanded_x + beta3'''
