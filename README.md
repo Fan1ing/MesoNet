@@ -4,7 +4,7 @@
 
 
 
-!\[MesoNet Architecture](./figures/Meso.tif)
+!\[MesoNet Architecture](./figures/Meso.png)
 
 
 
