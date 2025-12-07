@@ -1,10 +1,14 @@
-\# MesoNet
+\#MesoNet
 
-\####  Unifying Atomic Trajectories and Mesoscale Interactions for Predictive Modeling of Complex Mixtures.!\[MesoNet Architecture](./figures/MesoNet.tif)
+\####Unifying Atomic Trajectories and Mesoscale Interactions for Predictive Modeling of Complex Mixtures.
 
 
 
-\## Code running conditions
+!\[MesoNet Architecture](./figures/MesoNet.tif)
+
+
+
+\##Code running conditions
 
 
 
@@ -34,7 +38,7 @@ Example usage based on the activity coefficient dataset
 
 These examples can help you understand the workflow of data preprocessing and model training.
 
-\## Hyperparameters and model prediction:
+\##Hyperparameters and model prediction:
 
 In our training, we did not perform hyperparameter tuning on the validation set for each individual attribute prediction and then make predictions on the test set.
 
