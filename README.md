@@ -1,6 +1,6 @@
-\#MesoNet
+\# MesoNet
 
-\####Unifying Atomic Trajectories and Mesoscale Interactions for Predictive Modeling of Complex Mixtures.
+\#### Unifying Atomic Trajectories and Mesoscale Interactions for Predictive Modeling of Complex Mixtures
 
 
 
@@ -8,53 +8,95 @@
 
 
 
-\##Code running conditions
+\## Code Running Conditions
 
 
 
-\#MesoNet is implemented using Pytorch and runs on Ubuntu with NVIDIA GeForce RTX 4090 graphics processing units,which relies on Pytorch Geometric.
+MesoNet is implemented using \*\*PyTorch\*\* and runs on \*\*Ubuntu\*\* with \*\*NVIDIA GeForce RTX 4090\*\* GPUs.  
+
+The framework also relies on \*\*PyTorch Geometric\*\*.
 
 
 
-The following are the required Python libraries to be installed：numpy、pandas、rdkit、sklearn、ncps
+\### Required Python Libraries
+
+Please ensure the following libraries are installed:
 
 
 
-In the Concentration dependent directory, we provide:
+\- numpy  
+
+\- pandas  
+
+\- rdkit  
+
+\- scikit-learn  
+
+\- ncps  
+
+\- torch  
+
+\- torch\_geometric  
 
 
 
-Detailed implementation of each module
+---
 
 
 
-Data generation scripts
+\## Code Structure and Data Generation
 
 
 
-Example usage based on the activity coefficient dataset
+In the \*\*Concentration dependent\*\* directory, we provide:
 
 
 
-These examples can help you understand the workflow of data preprocessing and model training.
+\- Detailed implementation of each module  
 
-\##Hyperparameters and model prediction:
+\- Data generation scripts  
 
-In our training, we did not perform hyperparameter tuning on the validation set for each individual attribute prediction and then make predictions on the test set.
-
-
-
-ps： In practical applications, tuning hyperparameters for each property may increase the predictive performance of the model, but we did not do so because the training time was too long and the predictive performance was already better than the models reported in the literature.
+\- Example usage based on the activity coefficient dataset  
 
 
 
+These examples help illustrate data preprocessing procedures and the training workflow.
 
 
 
+---
 
-## Continuously updated
 
-We will continue to update data and models in the futureand we will constantly check the correctness and completeness of the code and data. If there are any code running errors or any questions, please contact my email: fanjinming@zju.edu.cn
+
+\## Hyperparameters and Model Prediction
+
+
+
+During training, we \*\*did not\*\* perform hyperparameter tuning on the validation set for each individual property before making predictions on the test set.
+
+
+
+\*\*Note:\*\*  
+
+In practical applications, tuning hyperparameters for each property may further improve predictive performance. However, we did not perform extensive tuning due to the long training time, and because MesoNet already outperforms models reported in existing literature.
+
+
+
+---
+
+
+
+\## Continuously Updated
+
+
+
+We will continue to update datasets and models, and regularly check the correctness and completeness of the code.  
+
+If you encounter any errors while running the code or have any questions, please contact:
+
+
+
+📧 \*\*fanjinming@zju.edu.cn\*\*
 
 
 
