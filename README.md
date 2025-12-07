@@ -1,6 +1,6 @@
-\# MesoNet
+# MesoNet
 
-\#### Unifying Atomic Trajectories and Mesoscale Interactions for Predictive Modeling of Complex Mixtures
+#### Unifying Atomic Trajectories and Mesoscale Interactions for Predictive Modeling of Complex Mixtures
 
 
 
@@ -8,7 +8,7 @@
 
 
 
-\## Code Running Conditions
+## Code Running Conditions
 
 
 
@@ -68,7 +68,7 @@ These examples help illustrate data preprocessing procedures and the training wo
 
 
 
-\## Hyperparameters and Model Prediction
+## Hyperparameters and Model Prediction
 
 
 
@@ -86,7 +86,7 @@ In practical applications, tuning hyperparameters for each property may further 
 
 
 
-\## Continuously Updated
+## Continuously Updated
 
 
 
