@@ -4,8 +4,7 @@
 
 
 
-!\[MesoNet Architecture](./figures/Meso.png)
-
+![MesoNet Architecture](figures/Meso.png)
 
 
 ## Code Running Conditions
