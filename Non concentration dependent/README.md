@@ -4,7 +4,7 @@
 
   * Make separate csv file for each column, and erase the NaN values for each column.
   * We log normalize the target value for **Lifetime** data .
-Modify the corresponding labels of the dataset to the required format in data_processing and run it directly.
+*Modify the corresponding labels of the dataset to the required format in data_processing and run it directly.
 
 ### code
 
