@@ -4,8 +4,9 @@
 
   * Make separate csv file for each column, and erase the NaN values for each column.
   * We log normalize the target value for **Lifetime** data .
+Modify the corresponding labels of the dataset to the required format in data_processing and run it directly.
 
 ### code
 
-&nbsp;	We have provided code examples for absorbing wavelengths, and for ease of repetition, we have put all the code in one folder for direct execution.
+&nbsp;	We have provided code examples for absorbing wavelengths.
 
